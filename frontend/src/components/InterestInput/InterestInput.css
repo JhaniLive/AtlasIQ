@@ -1,0 +1,238 @@
+.interest-input {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  width: 90%;
+  max-width: 600px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.interest-input__row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  width: 100%;
+}
+
+/* Camera button */
+.interest-input__camera-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border: 1px solid #333;
+  border-radius: 12px;
+  background: rgba(20, 20, 40, 0.9);
+  color: #888;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.interest-input__camera-btn:hover:not(:disabled) {
+  border-color: #00ff88;
+  color: #00ff88;
+}
+
+.interest-input__camera-btn:active:not(:disabled) {
+  background: rgba(0, 255, 136, 0.1);
+  border-color: #00ff88;
+  color: #00ff88;
+}
+
+.interest-input__camera-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Image preview strip */
+.interest-input__preview {
+  position: relative;
+  align-self: flex-start;
+  width: 80px;
+  height: 60px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #444;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  animation: previewFadeIn 0.25s ease;
+  flex-shrink: 0;
+}
+
+@keyframes previewFadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.interest-input__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.interest-input__preview-clear {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(220, 40, 40, 0.9);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.interest-input__preview-clear:hover {
+  background: rgba(240, 50, 50, 1);
+}
+
+.interest-input__preview-clear:active {
+  transform: scale(0.9);
+}
+
+/* Textarea */
+.interest-input__textarea {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 1px solid #333;
+  border-radius: 12px;
+  background: rgba(20, 20, 40, 0.9);
+  color: #e0e0e0;
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  backdrop-filter: blur(10px);
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+
+.interest-input__textarea:focus {
+  border-color: #00ff88;
+}
+
+.interest-input__textarea::placeholder {
+  color: #666;
+}
+
+/* Explore button */
+.interest-input__button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  background: #00ff88;
+  color: #0a0a1a;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.interest-input__button:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.interest-input__button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.interest-input__button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ===== Mobile: phones (<= 600px) ===== */
+@media (max-width: 600px) {
+  .interest-input {
+    bottom: 12px;
+    width: 95%;
+    gap: 6px;
+  }
+
+  .interest-input__row {
+    gap: 6px;
+  }
+
+  .interest-input__camera-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+  }
+
+  .interest-input__camera-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .interest-input__textarea {
+    padding: 10px 12px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  .interest-input__button {
+    padding: 10px 16px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+
+  .interest-input__preview {
+    width: 64px;
+    height: 48px;
+    border-radius: 8px;
+  }
+
+  .interest-input__preview-clear {
+    width: 20px;
+    height: 20px;
+    font-size: 13px;
+    top: 2px;
+    right: 2px;
+  }
+}
+
+/* ===== Tiny phones (<= 380px) ===== */
+@media (max-width: 380px) {
+  .interest-input {
+    width: 97%;
+    bottom: 8px;
+  }
+
+  .interest-input__row {
+    gap: 4px;
+  }
+
+  .interest-input__button {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .interest-input__textarea {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}

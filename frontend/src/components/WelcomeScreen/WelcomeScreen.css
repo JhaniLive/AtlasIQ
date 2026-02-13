@@ -1,0 +1,230 @@
+.welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 40%, #0f1a2e 0%, #070b14 60%, #000004 100%);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.welcome--fading {
+  opacity: 0;
+  transform: scale(1.04);
+  pointer-events: none;
+}
+
+.welcome__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px;
+  max-width: 520px;
+  width: 100%;
+}
+
+/* Title */
+.welcome__title {
+  font-size: 56px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 4px;
+  margin: 0;
+  animation: titleFadeIn 0.8s ease both;
+}
+
+.welcome__title-accent {
+  color: #00ff88;
+}
+
+@keyframes titleFadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.welcome__subtitle {
+  font-size: 15px;
+  color: #667;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 6px;
+  animation: subtitleFadeIn 0.8s 0.3s ease both;
+}
+
+@keyframes subtitleFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Typing tagline */
+.welcome__tagline-box {
+  margin-top: 40px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: subtitleFadeIn 0.8s 0.6s ease both;
+}
+
+.welcome__tagline-text {
+  font-size: 18px;
+  color: #c8d8e8;
+  font-weight: 400;
+}
+
+.welcome__cursor {
+  font-size: 20px;
+  color: #00ff88;
+  font-weight: 300;
+  margin-left: 1px;
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* CTA button */
+.welcome__cta {
+  margin-top: 44px;
+  padding: 14px 40px;
+  border: 2px solid #00ff88;
+  border-radius: 50px;
+  background: transparent;
+  color: #00ff88;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 1px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 0.5s ease, transform 0.5s ease, background 0.25s, color 0.25s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.welcome__cta--visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.welcome__cta:hover {
+  background: #00ff88;
+  color: #0a0a1a;
+}
+
+.welcome__cta:active {
+  transform: scale(0.96);
+}
+
+/* Feature pills */
+.welcome__features {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 48px;
+  animation: subtitleFadeIn 1s 1.2s ease both;
+}
+
+.welcome__feature {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid #1e2a3a;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #6a8090;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.welcome__feature-icon {
+  display: flex;
+  align-items: center;
+  color: #3a7060;
+}
+
+/* ===== Mobile (<= 600px) ===== */
+@media (max-width: 600px) {
+  .welcome__content {
+    padding: 24px 20px;
+  }
+
+  .welcome__title {
+    font-size: 42px;
+    letter-spacing: 3px;
+  }
+
+  .welcome__subtitle {
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  .welcome__tagline-box {
+    margin-top: 32px;
+    height: 28px;
+  }
+
+  .welcome__tagline-text {
+    font-size: 15px;
+  }
+
+  .welcome__cursor {
+    font-size: 17px;
+  }
+
+  .welcome__cta {
+    margin-top: 36px;
+    padding: 13px 34px;
+    font-size: 15px;
+  }
+
+  .welcome__features {
+    margin-top: 36px;
+    gap: 8px;
+  }
+
+  .welcome__feature {
+    padding: 7px 12px;
+    font-size: 11px;
+    gap: 5px;
+  }
+
+  .welcome__feature-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* ===== Tiny phones (<= 380px) ===== */
+@media (max-width: 380px) {
+  .welcome__title {
+    font-size: 36px;
+    letter-spacing: 2px;
+  }
+
+  .welcome__subtitle {
+    font-size: 11px;
+  }
+
+  .welcome__tagline-text {
+    font-size: 14px;
+  }
+
+  .welcome__cta {
+    margin-top: 28px;
+    padding: 12px 28px;
+    font-size: 14px;
+  }
+
+  .welcome__features {
+    margin-top: 28px;
+  }
+}

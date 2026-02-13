@@ -88,6 +88,7 @@ export default function CountryPanel({
     }
   }, [activeTabId]);
 
+
   // Auto-scroll chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -232,6 +233,18 @@ export default function CountryPanel({
   const handlePill = useCallback((prompt) => {
     sendMessage(prompt);
   }, [sendMessage]);
+
+  // Auto-send initial message if tab has one (e.g. image + text combo)
+  const sentInitialRef = useRef(new Set());
+  useEffect(() => {
+    if (!activeTabId || !country?._initialMessage) return;
+    if (sentInitialRef.current.has(activeTabId)) return;
+    sentInitialRef.current.add(activeTabId);
+    const timer = setTimeout(() => {
+      sendMessage(country._initialMessage);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [activeTabId, country?._initialMessage, sendMessage]);
 
   const isMobile = useMemo(() => window.innerWidth <= 600, []);
 

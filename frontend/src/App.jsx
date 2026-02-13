@@ -159,14 +159,18 @@ export default function App() {
   }, []);
 
   const navigateToResolved = useCallback(
-    (resolved) => {
+    (resolved, initialMessage) => {
       const datasetCountry = countries.find(
         (c) => c.code === resolved.code || c.name.toLowerCase() === resolved.name.toLowerCase(),
       );
       if (datasetCountry) {
         const flyLat = resolved.lat || datasetCountry.lat;
         const flyLng = resolved.lng || datasetCountry.lng;
-        const countryWithPlace = { ...datasetCountry, _placeName: resolved.place_name };
+        const countryWithPlace = {
+          ...datasetCountry,
+          _placeName: resolved.place_name,
+          ...(initialMessage ? { _initialMessage: initialMessage } : {}),
+        };
         const tabId = addTab(countryWithPlace);
         if (globeRef.current) {
           globeRef.current.flyTo(flyLat, flyLng);
@@ -184,6 +188,7 @@ export default function App() {
           adventure_score: 0, food_score: 0, infrastructure_score: 0,
           _chatOnly: true,
           _placeName: resolved.place_name,
+          ...(initialMessage ? { _initialMessage: initialMessage } : {}),
         };
         const tabId = addTab(chatOnlyCountry);
         if (resolved.lat && resolved.lng) {
@@ -262,13 +267,13 @@ export default function App() {
   );
 
   const handleImageExplore = useCallback(
-    async (imageDataUrl) => {
+    async (imageDataUrl, message) => {
       setError(null);
       setLoading(true);
       try {
         const resolved = await resolvePlaceImage(imageDataUrl);
         if (resolved && resolved.name) {
-          navigateToResolved(resolved);
+          navigateToResolved(resolved, message || null);
         } else {
           setError('Could not identify a place in this image');
         }

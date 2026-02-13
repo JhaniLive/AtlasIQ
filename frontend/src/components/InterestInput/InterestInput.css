@@ -28,7 +28,8 @@
   transition: border-color 0.2s;
 }
 
-.search-bar__form:focus-within {
+.search-bar__form:focus-within,
+.search-bar__form--focused {
   border-color: #00ff88;
 }
 
@@ -126,7 +127,7 @@
   flex-shrink: 0;
 }
 
-/* Text input */
+/* Text input — auto-grows up to ~5 lines, then scrolls */
 .search-bar__input {
   flex: 1;
   min-width: 0;
@@ -139,6 +140,8 @@
   resize: none;
   outline: none;
   line-height: 1.4;
+  max-height: 120px;
+  overflow-y: auto;
   -webkit-appearance: none;
 }
 

@@ -40,8 +40,10 @@ export default function InterestInput({ onSubmit, onImageSubmit, loading, search
   const [showAttach, setShowAttach] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [listening, setListening] = useState(false);
+  const [focused, setFocused] = useState(false);
   const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
+  const textareaRef = useRef(null);
   const attachRef = useRef(null);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -113,12 +115,20 @@ export default function InterestInput({ onSubmit, onImageSubmit, loading, search
     stopCameraStream();
   }, []);
 
+  // Auto-grow textarea as user types
+  const autoResize = useCallback((el) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }, []);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (loading) return;
     if (imagePreview) {
-      onImageSubmit?.(imagePreview);
+      onImageSubmit?.(imagePreview, text.trim());
       setImagePreview(null);
+      setText('');
       return;
     }
     if (text.trim()) {
@@ -237,7 +247,7 @@ export default function InterestInput({ onSubmit, onImageSubmit, loading, search
         )}
 
         {/* Main bar */}
-        <form className="search-bar__form" onSubmit={handleSubmit}>
+        <form className={`search-bar__form ${focused ? 'search-bar__form--focused' : ''}`} onSubmit={handleSubmit}>
           {/* Hidden file input for gallery */}
           <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
 
@@ -279,16 +289,22 @@ export default function InterestInput({ onSubmit, onImageSubmit, loading, search
 
           {/* Text input */}
           <textarea
+            ref={textareaRef}
             className="search-bar__input"
             placeholder="Search any place, landmark, or describe a trip..."
             value={text}
-            onChange={(e) => { setText(e.target.value); if (e.target.value.trim()) setShowHistory(false); }}
-            onFocus={() => !text.trim() && setShowHistory(true)}
-            onBlur={() => setTimeout(() => setShowHistory(false), 200)}
+            onChange={(e) => {
+              setText(e.target.value);
+              autoResize(e.target);
+              if (e.target.value.trim()) setShowHistory(false);
+            }}
+            onFocus={() => { setFocused(true); if (!text.trim()) setShowHistory(true); }}
+            onBlur={() => { setFocused(false); setTimeout(() => setShowHistory(false), 200); }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSubmit(e);
+                if (textareaRef.current) textareaRef.current.style.height = 'auto';
               }
             }}
             rows={1}

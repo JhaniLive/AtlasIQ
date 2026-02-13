@@ -1,193 +1,271 @@
-.interest-input {
+/* ===== Search Bar — single unified input bar ===== */
+
+.search-bar {
   position: fixed;
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
+  width: 90%;
+  max-width: 560px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  align-items: center;
-  width: 90%;
-  max-width: 600px;
+  align-items: stretch;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.interest-input__row {
+/* The unified bar */
+.search-bar__form {
   display: flex;
-  gap: 10px;
   align-items: flex-end;
-  width: 100%;
+  gap: 0;
+  background: rgba(18, 18, 36, 0.92);
+  border: 1px solid #2a2a3e;
+  border-radius: 24px;
+  padding: 6px 6px 6px 4px;
+  backdrop-filter: blur(16px);
+  transition: border-color 0.2s;
 }
 
-/* Camera button */
-.interest-input__camera-btn {
+.search-bar__form:focus-within {
+  border-color: #00ff88;
+}
+
+/* Icon buttons — shared base */
+.search-bar__icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
-  border: 1px solid #333;
-  border-radius: 12px;
-  background: rgba(20, 20, 40, 0.9);
-  color: #888;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #666;
   cursor: pointer;
-  backdrop-filter: blur(10px);
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  transition: color 0.15s, background 0.15s;
   -webkit-tap-highlight-color: transparent;
+  padding: 0;
 }
 
-.interest-input__camera-btn:hover:not(:disabled) {
-  border-color: #00ff88;
-  color: #00ff88;
+.search-bar__icon-btn:hover:not(:disabled) {
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.interest-input__camera-btn:active:not(:disabled) {
-  background: rgba(0, 255, 136, 0.1);
-  border-color: #00ff88;
-  color: #00ff88;
-}
-
-.interest-input__camera-btn:disabled {
-  opacity: 0.4;
+.search-bar__icon-btn:disabled {
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
-/* Image preview strip */
-.interest-input__preview {
+/* Plus button */
+.search-bar__attach {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.search-bar__plus {
+  transition: transform 0.2s, color 0.15s, background 0.15s;
+}
+
+.search-bar__plus--open {
+  transform: rotate(45deg);
+  color: #00ff88;
+}
+
+/* Attach menu popup */
+.search-bar__attach-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  background: rgba(18, 18, 36, 0.96);
+  border: 1px solid #2a2a3e;
+  border-radius: 14px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 170px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: menuFadeIn 0.15s ease;
+  z-index: 10;
+}
+
+@keyframes menuFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.search-bar__attach-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #c0c0c0;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.search-bar__attach-menu button:hover {
+  background: rgba(0, 255, 136, 0.08);
+  color: #fff;
+}
+
+.search-bar__attach-menu button svg {
+  color: #888;
+  flex-shrink: 0;
+}
+
+/* Text input */
+.search-bar__input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  line-height: 1.4;
+  -webkit-appearance: none;
+}
+
+.search-bar__input::placeholder {
+  color: #555;
+}
+
+/* Right actions group */
+.search-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* Mic button */
+.search-bar__mic--active {
+  color: #ff4444 !important;
+  animation: micPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 68, 68, 0); }
+}
+
+/* Send button */
+.search-bar__send {
+  color: #444;
+}
+
+.search-bar__send--active {
+  background: #00ff88;
+  color: #0a0a1a;
+}
+
+.search-bar__send--active:hover:not(:disabled) {
+  background: #00dd77;
+  color: #0a0a1a;
+}
+
+/* Loading spinner in send button */
+.search-bar__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #333;
+  border-top-color: #00ff88;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Image preview — floating above the bar */
+.search-bar__preview {
   position: relative;
   align-self: flex-start;
   width: 80px;
   height: 60px;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid #444;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-  animation: previewFadeIn 0.25s ease;
-  flex-shrink: 0;
+  border: 1px solid #333;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: previewPop 0.2s ease;
 }
 
-@keyframes previewFadeIn {
-  from { opacity: 0; transform: scale(0.9); }
+@keyframes previewPop {
+  from { opacity: 0; transform: scale(0.85); }
   to { opacity: 1; transform: scale(1); }
 }
 
-.interest-input__preview img {
+.search-bar__preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.interest-input__preview-clear {
+.search-bar__preview-clear {
   position: absolute;
   top: 3px;
   right: 3px;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border: none;
   border-radius: 50%;
   background: rgba(220, 40, 40, 0.9);
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, transform 0.15s;
+  transition: background 0.15s;
 }
 
-.interest-input__preview-clear:hover {
+.search-bar__preview-clear:hover {
   background: rgba(240, 50, 50, 1);
 }
 
-.interest-input__preview-clear:active {
-  transform: scale(0.9);
-}
-
-/* Textarea */
-.interest-input__textarea {
-  flex: 1;
-  min-width: 0;
-  padding: 12px 16px;
-  border: 1px solid #333;
-  border-radius: 12px;
-  background: rgba(20, 20, 40, 0.9);
-  color: #e0e0e0;
-  font-size: 14px;
-  font-family: inherit;
-  resize: none;
-  outline: none;
-  backdrop-filter: blur(10px);
-  transition: border-color 0.2s;
-  -webkit-appearance: none;
-}
-
-.interest-input__textarea:focus {
-  border-color: #00ff88;
-}
-
-.interest-input__textarea::placeholder {
-  color: #666;
-}
-
-/* Explore button */
-.interest-input__button {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 12px;
-  background: #00ff88;
-  color: #0a0a1a;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
-  white-space: nowrap;
-  flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.interest-input__button:hover:not(:disabled) {
-  opacity: 0.85;
-}
-
-.interest-input__button:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.interest-input__button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Search history dropdown */
-.interest-input__history {
-  width: 100%;
-  background: rgba(20, 20, 40, 0.95);
-  border: 1px solid #333;
-  border-radius: 10px;
-  padding: 8px 0;
-  backdrop-filter: blur(10px);
-  animation: previewFadeIn 0.2s ease;
+/* Search history */
+.search-bar__history {
+  background: rgba(18, 18, 36, 0.96);
+  border: 1px solid #2a2a3e;
+  border-radius: 14px;
+  padding: 6px 0;
+  backdrop-filter: blur(16px);
   max-height: 200px;
   overflow-y: auto;
+  animation: menuFadeIn 0.15s ease;
 }
 
-.interest-input__history-header {
+.search-bar__history-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 14px 8px;
+  padding: 4px 14px 6px;
   font-size: 11px;
-  color: #666;
+  color: #555;
 }
 
-.interest-input__history-clear {
+.search-bar__history-head button {
   background: none;
   border: none;
   color: #ff6688;
@@ -199,98 +277,210 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.interest-input__history-clear:hover {
+.search-bar__history-head button:hover {
   background: rgba(255, 68, 102, 0.1);
 }
 
-.interest-input__history-item {
+.search-bar__history-item {
   display: block;
   width: 100%;
   text-align: left;
   padding: 8px 14px;
   background: none;
   border: none;
-  color: #c0c0c0;
+  color: #b0b0b0;
   font-size: 13px;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.15s;
+  transition: background 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 
-.interest-input__history-item:hover {
-  background: rgba(0, 255, 136, 0.08);
+.search-bar__history-item:hover {
+  background: rgba(0, 255, 136, 0.06);
   color: #fff;
 }
 
-/* ===== Mobile: phones (<= 600px) ===== */
+/* ===== Mobile (<= 600px) ===== */
 @media (max-width: 600px) {
-  .interest-input {
+  .search-bar {
     bottom: 12px;
     width: 95%;
-    gap: 6px;
   }
 
-  .interest-input__row {
-    gap: 6px;
+  .search-bar__form {
+    border-radius: 20px;
+    padding: 4px 4px 4px 2px;
   }
 
-  .interest-input__camera-btn {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-  }
-
-  .interest-input__camera-btn svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .interest-input__textarea {
-    padding: 10px 12px;
+  .search-bar__input {
     font-size: 14px;
-    border-radius: 10px;
+    padding: 6px 2px;
   }
 
-  .interest-input__button {
-    padding: 10px 16px;
+  .search-bar__icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .search-bar__icon-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .search-bar__attach-menu {
+    min-width: 160px;
+    border-radius: 12px;
+  }
+
+  .search-bar__attach-menu button {
+    padding: 10px 12px;
     font-size: 13px;
-    border-radius: 10px;
   }
 
-  .interest-input__preview {
+  .search-bar__preview {
     width: 64px;
     height: 48px;
-    border-radius: 8px;
-  }
-
-  .interest-input__preview-clear {
-    width: 20px;
-    height: 20px;
-    font-size: 13px;
-    top: 2px;
-    right: 2px;
+    border-radius: 10px;
   }
 }
 
 /* ===== Tiny phones (<= 380px) ===== */
 @media (max-width: 380px) {
-  .interest-input {
+  .search-bar {
     width: 97%;
     bottom: 8px;
   }
 
-  .interest-input__row {
-    gap: 4px;
+  .search-bar__form {
+    border-radius: 18px;
   }
 
-  .interest-input__button {
-    padding: 10px 12px;
-    font-size: 12px;
-  }
-
-  .interest-input__textarea {
-    padding: 8px 10px;
+  .search-bar__input {
     font-size: 13px;
+  }
+
+  .search-bar__icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ===== Camera Modal ===== */
+.camera-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: menuFadeIn 0.2s ease;
+}
+
+.camera-modal__content {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.camera-modal__video {
+  width: 100%;
+  max-height: 70vh;
+  border-radius: 16px;
+  object-fit: cover;
+  background: #111;
+}
+
+.camera-modal__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 24px;
+  padding: 0 16px;
+}
+
+.camera-modal__close {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 80px;
+  text-align: center;
+}
+
+.camera-modal__close:hover {
+  color: #fff;
+}
+
+.camera-modal__capture {
+  width: 64px;
+  height: 64px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.camera-modal__capture:hover {
+  transform: scale(1.05);
+}
+
+.camera-modal__capture:active {
+  transform: scale(0.95);
+}
+
+.camera-modal__shutter {
+  display: block;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #fff;
+  transition: background 0.15s;
+}
+
+.camera-modal__capture:active .camera-modal__shutter {
+  background: #ccc;
+}
+
+.camera-modal__spacer {
+  min-width: 80px;
+}
+
+@media (max-width: 600px) {
+  .camera-modal__video {
+    border-radius: 0;
+    max-height: 65vh;
+  }
+
+  .camera-modal__controls {
+    margin-top: 20px;
+  }
+
+  .camera-modal__capture {
+    width: 56px;
+    height: 56px;
+  }
+
+  .camera-modal__shutter {
+    width: 44px;
+    height: 44px;
   }
 }

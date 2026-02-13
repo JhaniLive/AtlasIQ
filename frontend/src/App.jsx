@@ -43,11 +43,20 @@ function extractPlace(input) {
   return place;
 }
 
+// Common greetings / non-place words that the AI might misinterpret
+const NON_PLACE_WORDS = new Set([
+  'hi', 'hello', 'hey', 'yo', 'sup', 'ok', 'yes', 'no', 'thanks', 'thank',
+  'bye', 'help', 'please', 'test', 'lol', 'wow', 'cool', 'nice', 'good',
+  'bad', 'what', 'how', 'why', 'who', 'when', 'where', 'the', 'hola', 'ciao',
+]);
+
 // Basic check: does the input look like it could contain real words?
-// Rejects strings with no vowels or excessive consonant clusters
+// Rejects strings with no vowels, excessive consonant clusters, or common non-place words
 function looksLikeGibberish(text) {
   const clean = text.toLowerCase().replace(/[^a-z]/g, '');
-  if (clean.length < 2) return true;
+  if (clean.length < 3) return true;
+  // Reject common greetings and non-place words
+  if (NON_PLACE_WORDS.has(clean)) return true;
   // Must contain at least one vowel
   if (!/[aeiouy]/.test(clean)) return true;
   // Reject if >5 consonants in a row (no real English/place name does this)
@@ -67,10 +76,10 @@ function detectLocation(input, countries) {
     }
   }
 
-  // Check countries
+  // Check countries (require at least 3 chars for substring match to avoid false positives like "hi" → Philippines)
   for (const c of countries) {
     const name = c.name.toLowerCase();
-    if (place === name || place.includes(name) || name.includes(place)) {
+    if (place === name || place.includes(name) || (place.length >= 3 && name.startsWith(place))) {
       return { type: 'country', country: c };
     }
   }

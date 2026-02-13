@@ -1,6 +1,24 @@
 import axios from 'axios';
 import { API_URL } from '../utils/constants';
 
+function withCache(fn, prefix, ttlMs = 300000) {
+  return async (...args) => {
+    const key = `atlasiq_${prefix}_${JSON.stringify(args)}`;
+    try {
+      const cached = sessionStorage.getItem(key);
+      if (cached) {
+        const { data, ts } = JSON.parse(cached);
+        if (Date.now() - ts < ttlMs) return data;
+      }
+    } catch {}
+    const result = await fn(...args);
+    try {
+      sessionStorage.setItem(key, JSON.stringify({ data: result, ts: Date.now() }));
+    } catch {}
+    return result;
+  };
+}
+
 const client = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
@@ -33,7 +51,7 @@ export async function resolvePlaceImage(imageDataUrl) {
 }
 
 // Fetch a photo for a place from Wikipedia (free, no key needed)
-export async function getPlacePhoto(placeName) {
+async function _getPlacePhoto(placeName) {
   if (!placeName) return null;
   try {
     const encoded = encodeURIComponent(placeName);
@@ -58,9 +76,10 @@ export async function getPlacePhoto(placeName) {
     return null;
   }
 }
+export const getPlacePhoto = withCache(_getPlacePhoto, 'photo');
 
 // Reverse geocode coordinates to a city/state name (free Nominatim API)
-export async function reverseGeocode(lat, lng) {
+async function _reverseGeocode(lat, lng) {
   try {
     const res = await axios.get(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=10&addressdetails=1`,
@@ -74,6 +93,7 @@ export async function reverseGeocode(lat, lng) {
     return null;
   }
 }
+export const reverseGeocode = withCache(_reverseGeocode, 'geo');
 
 export async function chatAboutCountry(message, countryCode = '', countryName = '') {
   const { data } = await client.post('/chat', {

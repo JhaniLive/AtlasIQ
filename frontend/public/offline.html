@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AtlasIQ — Offline</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0a0a1a;
+      color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+      padding: 24px;
+    }
+    h1 { font-size: 36px; color: #00ff88; margin-bottom: 12px; }
+    p { color: #888; margin-bottom: 24px; max-width: 400px; }
+    button {
+      padding: 12px 32px;
+      border: 2px solid #00ff88;
+      border-radius: 50px;
+      background: transparent;
+      color: #00ff88;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover { background: #00ff88; color: #0a0a1a; }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>You're offline</h1>
+    <p>AtlasIQ needs an internet connection to explore the world. Please check your connection and try again.</p>
+    <button onclick="window.location.reload()">Try Again</button>
+  </div>
+</body>
+</html>

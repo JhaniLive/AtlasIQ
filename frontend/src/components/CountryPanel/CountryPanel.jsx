@@ -21,6 +21,8 @@ export default function CountryPanel({
   recommendations,
   getScoreForCountry,
   getInsightForCountry,
+  onBookmarkToggle,
+  isBookmarked,
 }) {
   // Per-tab state maps
   const [chatMap, setChatMap] = useState(new Map());
@@ -248,6 +250,8 @@ export default function CountryPanel({
     <div
       ref={panelRef}
       className={`country-panel ${minimized ? 'country-panel--minimized' : ''}`}
+      role="complementary"
+      aria-label="Country information"
       style={{ ...posStyle, ...sizeStyle }}
       onMouseDown={onMouseDown}
     >
@@ -290,6 +294,13 @@ export default function CountryPanel({
               </span>
             </div>
             <div className="country-panel__actions">
+              <button
+                className={`country-panel__bookmark ${isBookmarked?.(country.code) ? 'country-panel__bookmark--active' : ''}`}
+                onClick={() => onBookmarkToggle?.(country)}
+                title={isBookmarked?.(country.code) ? 'Remove bookmark' : 'Bookmark'}
+              >
+                {isBookmarked?.(country.code) ? '\u2605' : '\u2606'}
+              </button>
               <button
                 className="country-panel__minimize"
                 onClick={() => setMinimized((p) => !p)}
@@ -399,7 +410,7 @@ export default function CountryPanel({
                     <div ref={messagesEndRef} />
                   </div>
                 )}
-                <form className="country-panel__chat-form" onSubmit={handleChat}>
+                <form className="country-panel__chat-form" onSubmit={handleChat} role="search" aria-label="Chat about this country">
                   <input
                     className="country-panel__chat-input"
                     type="text"

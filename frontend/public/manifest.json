@@ -1,0 +1,22 @@
+{
+  "name": "AtlasIQ — AI World Explorer",
+  "short_name": "AtlasIQ",
+  "description": "Explore the world with AI. Search places, upload photos, chat about countries on a 3D globe.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

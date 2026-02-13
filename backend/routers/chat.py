@@ -1,14 +1,18 @@
 import json
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from utils.llm_client import chat_completion, vision_completion
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["chat"])
+
+limiter = Limiter(key_func=get_remote_address)
 
 SYSTEM_PROMPT = """You are AtlasIQ, a friendly and knowledgeable travel expert AI. You help users learn about countries and plan travel.
 
@@ -68,7 +72,8 @@ class ResolvePlaceResponse(BaseModel):
 
 
 @router.post("/resolve-place", response_model=ResolvePlaceResponse)
-async def resolve_place(req: ResolvePlaceRequest):
+@limiter.limit("30/minute")
+async def resolve_place(request: Request, req: ResolvePlaceRequest):
     if not req.place.strip():
         raise HTTPException(status_code=400, detail="Place cannot be empty")
     try:
@@ -106,7 +111,8 @@ class ResolvePlaceImageRequest(BaseModel):
 
 
 @router.post("/resolve-place-image", response_model=ResolvePlaceResponse)
-async def resolve_place_image(req: ResolvePlaceImageRequest):
+@limiter.limit("10/minute")
+async def resolve_place_image(request: Request, req: ResolvePlaceImageRequest):
     if not req.image or not req.image.startswith("data:image/"):
         raise HTTPException(status_code=400, detail="Invalid image data URL")
     if len(req.image) > MAX_IMAGE_BASE64_SIZE:
@@ -152,7 +158,8 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
+@limiter.limit("30/minute")
+async def chat(request: Request, req: ChatRequest):
     if not req.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 

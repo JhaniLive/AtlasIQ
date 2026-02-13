@@ -6,6 +6,8 @@ import CountryPanel from './components/CountryPanel/CountryPanel';
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen';
 import { getCountries, getRecommendations, resolvePlace, resolvePlaceImage, getPlacePhoto, reverseGeocode } from './services/api';
 import { useGlobe } from './hooks/useGlobe';
+import { useSearchHistory } from './hooks/useSearchHistory';
+import { useBookmarks } from './hooks/useBookmarks';
 import './App.css';
 
 // Continents with center coordinates
@@ -100,11 +102,31 @@ export default function App() {
     getInsightForCountry,
   } = useGlobe();
 
+  const { history: searchHistory, addSearch, clearHistory } = useSearchHistory();
+  const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
+
   useEffect(() => {
     getCountries()
       .then(setCountries)
       .catch(() => setError('Failed to load countries'));
   }, []);
+
+  // Handle ?place= URL param for sharing
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const place = params.get('place');
+    if (place && countries.length > 0) {
+      handleExplore(place);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [countries]);
+
+  // Auto-dismiss errors after 6 seconds
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 6000);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   // Fetch photo and pin it on the globe, keyed by tabId
   const pinPhotoOnGlobe = useCallback((lat, lng, placeName, countryName, tabId) => {
@@ -167,6 +189,7 @@ export default function App() {
   const handleExplore = useCallback(
     async (interests) => {
       setError(null);
+      addSearch(interests);
 
       // 1. Fast static check: continents + dataset countries (instant, no API call)
       const location = detectLocation(interests, countries);
@@ -294,7 +317,13 @@ export default function App() {
         onCountryClick={handleCountryClick}
       />
 
-      <InterestInput onSubmit={handleExplore} onImageSubmit={handleImageExplore} loading={loading} />
+      <InterestInput
+        onSubmit={handleExplore}
+        onImageSubmit={handleImageExplore}
+        loading={loading}
+        searchHistory={searchHistory}
+        onClearHistory={clearHistory}
+      />
 
       <CountryPanel
         tabs={openTabs}
@@ -304,6 +333,8 @@ export default function App() {
         recommendations={recommendations}
         getScoreForCountry={getScoreForCountry}
         getInsightForCountry={getInsightForCountry}
+        onBookmarkToggle={toggleBookmark}
+        isBookmarked={isBookmarked}
       />
 
       {loading && (
@@ -313,7 +344,12 @@ export default function App() {
         </div>
       )}
 
-      {error && <div className="app__error">{error}</div>}
+      {error && (
+        <div className="app__error">
+          <span>{error}</span>
+          <button className="app__error-close" onClick={() => setError(null)} aria-label="Dismiss">&times;</button>
+        </div>
+      )}
     </div>
   );
 }

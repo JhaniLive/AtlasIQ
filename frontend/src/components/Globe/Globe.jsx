@@ -465,6 +465,7 @@ const Globe = forwardRef(function Globe(
         className="globe-rotate-btn"
         onClick={toggleRotation}
         title={rotating ? 'Pause rotation' : 'Resume rotation'}
+        aria-label={rotating ? 'Pause globe rotation' : 'Start globe rotation'}
       >
         {rotating ? '\u23F8' : '\u25B6'}
       </button>

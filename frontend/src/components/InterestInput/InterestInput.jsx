@@ -3,6 +3,32 @@ import './InterestInput.css';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
+function compressImage(dataUrl, maxSize = 1024, quality = 0.7) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxSize || height > maxSize) {
+        if (width > height) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        } else {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 function useIsMobile(breakpoint = 600) {
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.innerWidth <= breakpoint,
@@ -16,9 +42,10 @@ function useIsMobile(breakpoint = 600) {
   return isMobile;
 }
 
-export default function InterestInput({ onSubmit, onImageSubmit, loading }) {
+export default function InterestInput({ onSubmit, onImageSubmit, loading, searchHistory, onClearHistory }) {
   const [text, setText] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
   const fileInputRef = useRef(null);
   const isMobile = useIsMobile();
 
@@ -45,7 +72,10 @@ export default function InterestInput({ onSubmit, onImageSubmit, loading }) {
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result);
+    reader.onload = async () => {
+      const compressed = await compressImage(reader.result);
+      setImagePreview(compressed);
+    };
     reader.readAsDataURL(file);
     // Reset so the same file can be re-selected
     e.target.value = '';
@@ -70,6 +100,24 @@ export default function InterestInput({ onSubmit, onImageSubmit, loading }) {
           >
             &times;
           </button>
+        </div>
+      )}
+      {showHistory && searchHistory?.length > 0 && !imagePreview && (
+        <div className="interest-input__history">
+          <div className="interest-input__history-header">
+            <span>Recent searches</span>
+            <button type="button" onClick={onClearHistory} className="interest-input__history-clear">Clear</button>
+          </div>
+          {searchHistory.map((term, i) => (
+            <button
+              key={i}
+              type="button"
+              className="interest-input__history-item"
+              onClick={() => { setText(term); setShowHistory(false); }}
+            >
+              {term}
+            </button>
+          ))}
         </div>
       )}
       <div className="interest-input__row">
@@ -98,7 +146,9 @@ export default function InterestInput({ onSubmit, onImageSubmit, loading }) {
             ? 'Describe a trip or upload a photo...'
             : 'Describe your ideal trip... (e.g., safe beaches with great food and nightlife)'}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => { setText(e.target.value); if (e.target.value.trim()) setShowHistory(false); }}
+          onFocus={() => !text.trim() && setShowHistory(true)}
+          onBlur={() => setTimeout(() => setShowHistory(false), 200)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();

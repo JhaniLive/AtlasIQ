@@ -42,12 +42,13 @@
   background: rgba(255, 255, 255, 0.04);
   border-radius: 10px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
 
 .ranking-panel__item:hover {
   background: rgba(0, 255, 136, 0.1);
+  transform: translateY(-1px);
 }
 
 .ranking-panel__item:active {

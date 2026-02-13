@@ -165,6 +165,64 @@
   cursor: not-allowed;
 }
 
+/* Search history dropdown */
+.interest-input__history {
+  width: 100%;
+  background: rgba(20, 20, 40, 0.95);
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 8px 0;
+  backdrop-filter: blur(10px);
+  animation: previewFadeIn 0.2s ease;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.interest-input__history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 14px 8px;
+  font-size: 11px;
+  color: #666;
+}
+
+.interest-input__history-clear {
+  background: none;
+  border: none;
+  color: #ff6688;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 2px 6px;
+  border-radius: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.interest-input__history-clear:hover {
+  background: rgba(255, 68, 102, 0.1);
+}
+
+.interest-input__history-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  color: #c0c0c0;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.interest-input__history-item:hover {
+  background: rgba(0, 255, 136, 0.08);
+  color: #fff;
+}
+
 /* ===== Mobile: phones (<= 600px) ===== */
 @media (max-width: 600px) {
   .interest-input {

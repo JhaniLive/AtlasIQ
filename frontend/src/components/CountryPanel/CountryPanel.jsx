@@ -195,6 +195,9 @@ export default function CountryPanel({
   const sendMessage = useCallback(async (msg) => {
     if (!msg || chatLoading || !country || !activeTabId) return;
 
+    // Capture existing messages before adding the new one (for history)
+    const existingMessages = chatMap.get(activeTabId) || [];
+
     // Add user message to this tab's chat
     setChatMap(prev => {
       const next = new Map(prev);
@@ -206,11 +209,13 @@ export default function CountryPanel({
     setChatLoading(true);
 
     try {
-      const res = await chatAboutCountry(msg, country.code, country.name);
+      const code = country.code?.startsWith('_agent_') ? '' : country.code;
+      const name = country.code?.startsWith('_agent_') ? '' : country.name;
+      const res = await chatAboutCountry(msg, code, name, existingMessages);
       setChatMap(prev => {
         const next = new Map(prev);
         const existing = next.get(activeTabId) || [];
-        next.set(activeTabId, [...existing, { role: 'ai', text: res.reply }]);
+        next.set(activeTabId, [...existing, { role: 'ai', text: res.reply, thoughts: res.thoughts, iterations: res.iterations }]);
         return next;
       });
     } catch {
@@ -223,7 +228,7 @@ export default function CountryPanel({
     } finally {
       setChatLoading(false);
     }
-  }, [chatLoading, country, activeTabId]);
+  }, [chatLoading, country, activeTabId, chatMap]);
 
   const handleChat = useCallback((e) => {
     e.preventDefault();
@@ -413,6 +418,16 @@ export default function CountryPanel({
                     {messages.map((m, i) => (
                       <div key={i} className={`country-panel__msg country-panel__msg--${m.role}`}>
                         {m.text}
+                        {m.thoughts?.length > 0 && (
+                          <details className="country-panel__thoughts">
+                            <summary>Agent used {m.iterations || m.thoughts.length} step{(m.iterations || m.thoughts.length) !== 1 ? 's' : ''}</summary>
+                            <ol>
+                              {m.thoughts.map((t, j) => (
+                                <li key={j}>{t}</li>
+                              ))}
+                            </ol>
+                          </details>
+                        )}
                       </div>
                     ))}
                     {chatLoading && (

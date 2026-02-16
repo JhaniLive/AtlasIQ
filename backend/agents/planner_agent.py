@@ -1,8 +1,6 @@
-import json
-
 from agents.base_agent import BaseAgent
 from models.preferences import WeightedPreferences
-from utils.llm_client import chat_completion
+from utils.json_helpers import parse_json_with_retry
 
 SYSTEM_PROMPT = """You are a travel preference analyzer. Given a user's travel interests described in natural language, output a JSON object with numerical weights (0.0 to 1.0) for each category.
 
@@ -28,21 +26,12 @@ class PlannerAgent(BaseAgent):
         interests = input_data["interests"]
         prompt = f"User's travel interests: {interests}"
 
-        raw = await chat_completion(
+        weights = await parse_json_with_retry(
             prompt=prompt,
             system=SYSTEM_PROMPT,
             temperature=0.3,
             max_tokens=512,
+            max_retries=2,
         )
-
-        # Strip markdown code fences if present
-        cleaned = raw.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
-            cleaned = cleaned.strip()
-
-        weights = json.loads(cleaned)
         preferences = WeightedPreferences(**weights)
-        return {"preferences": preferences, "raw_response": raw}
+        return {"preferences": preferences, "raw_response": weights}

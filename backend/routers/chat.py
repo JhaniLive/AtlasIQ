@@ -6,7 +6,10 @@ from pydantic import BaseModel
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from utils.llm_client import chat_completion, vision_completion
+from agents.react_agent import ReActAgent
+from services.country_service import get_by_code
+from utils.json_helpers import clean_json_response
+from utils.llm_client import chat_completion, chat_completion_with_history, vision_completion
 
 logger = logging.getLogger(__name__)
 
@@ -83,12 +86,7 @@ async def resolve_place(request: Request, req: ResolvePlaceRequest):
             temperature=0.0,
             max_tokens=150,
         )
-        # Parse JSON from response (strip markdown fences if any)
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-            text = text.rsplit("```", 1)[0]
-        data = json.loads(text)
+        data = json.loads(clean_json_response(raw))
         if not data.get("name"):
             return ResolvePlaceResponse()
         return ResolvePlaceResponse(
@@ -125,11 +123,7 @@ async def resolve_place_image(request: Request, req: ResolvePlaceImageRequest):
             temperature=0.0,
             max_tokens=300,
         )
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-            text = text.rsplit("```", 1)[0]
-        data = json.loads(text)
+        data = json.loads(clean_json_response(raw))
         if not data.get("name"):
             return ResolvePlaceResponse()
         return ResolvePlaceResponse(
@@ -147,14 +141,51 @@ async def resolve_place_image(request: Request, req: ResolvePlaceImageRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class ChatMessage(BaseModel):
+    role: str
+    text: str
+
+
 class ChatRequest(BaseModel):
     message: str
     country_code: str = ""
     country_name: str = ""
+    history: list[ChatMessage] = []
+    use_agent: bool = True
 
 
 class ChatResponse(BaseModel):
     reply: str
+    thoughts: list[str] = []
+    iterations: int = 0
+
+
+MAX_HISTORY = 20
+
+react_agent = ReActAgent()
+
+
+def _build_rag_context(country_code: str, country_name: str) -> tuple[str, str]:
+    """Build user context prefix and RAG context from country data.
+    Returns (context, rag_context) strings.
+    """
+    context = ""
+    rag_context = ""
+    if country_code:
+        country_data = get_by_code(country_code)
+        if country_data:
+            context = f"The user is currently looking at {country_name} ({country_code}) on the globe. "
+            scores = country_data.score_fields
+            score_lines = ", ".join(f"{k}: {v}" for k, v in scores.items())
+            rag_context = (
+                f"\n\nREAL DATA for {country_data.name} ({country_data.code}):\n"
+                f"Climate: {country_data.climate}\n"
+                f"Scores (out of 10): {score_lines}\n"
+                f"Use these real scores when answering. Do not contradict them."
+            )
+    elif country_name:
+        context = f"The user is currently looking at {country_name} on the globe. "
+    return context, rag_context
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -163,20 +194,41 @@ async def chat(request: Request, req: ChatRequest):
     if not req.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-    context = ""
-    if req.country_name:
-        context = f"The user is currently looking at {req.country_name} ({req.country_code}) on the globe. "
+    context, rag_context = _build_rag_context(req.country_code, req.country_name)
 
-    prompt = f"{context}User says: {req.message}"
+    # Build conversation history messages
+    history_messages = []
+    for m in req.history[-MAX_HISTORY:]:
+        role = "assistant" if m.role == "ai" else "user"
+        history_messages.append({"role": role, "content": m.text})
+
+    # Current user message with country context
+    user_content = f"{context}User says: {req.message}" if context else req.message
+    history_messages.append({"role": "user", "content": user_content})
 
     try:
-        reply = await chat_completion(
-            prompt=prompt,
-            system=SYSTEM_PROMPT,
-            temperature=0.7,
-            max_tokens=500,
-        )
-        return ChatResponse(reply=reply.strip())
+        if req.use_agent:
+            # ReAct agent path — tool-calling loop
+            result = await react_agent.run(
+                messages=history_messages,
+                country_code=req.country_code,
+                rag_context=rag_context,
+            )
+            return ChatResponse(
+                reply=result["reply"],
+                thoughts=result.get("thoughts", []),
+                iterations=result.get("iterations", 0),
+            )
+        else:
+            # Simple chat path — single LLM call, cheaper and faster
+            system_content = SYSTEM_PROMPT + rag_context
+            messages = [{"role": "system", "content": system_content}] + history_messages
+            reply = await chat_completion_with_history(
+                messages=messages,
+                temperature=0.7,
+                max_tokens=500,
+            )
+            return ChatResponse(reply=reply.strip())
     except Exception as e:
         logger.exception("Chat failed")
         raise HTTPException(status_code=500, detail=str(e))

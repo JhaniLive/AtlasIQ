@@ -95,11 +95,13 @@ async function _reverseGeocode(lat, lng) {
 }
 export const reverseGeocode = withCache(_reverseGeocode, 'geo');
 
-export async function chatAboutCountry(message, countryCode = '', countryName = '') {
+export async function chatAboutCountry(message, countryCode = '', countryName = '', history = [], useAgent = true) {
   const { data } = await client.post('/chat', {
     message,
     country_code: countryCode,
     country_name: countryName,
+    history,
+    use_agent: useAgent,
   });
   return data;
 }

@@ -50,6 +50,19 @@ const NON_PLACE_WORDS = new Set([
   'bad', 'what', 'how', 'why', 'who', 'when', 'where', 'the', 'hola', 'ciao',
 ]);
 
+// Detect if input is a question/command for the agent rather than a place name
+const AGENT_PATTERNS = [
+  /^(compare|vs\.?|versus)\b/i,
+  /\b(compare|vs\.?|versus|compared to)\b.*\b(and|with|to)\b/i,
+  /^(which|what|how|why|who|where|when|is|are|do|does|can|should|rank|list|top|best|worst|safest|cheapest)\b/i,
+  /\?$/,
+];
+
+function isAgentQuery(input) {
+  const trimmed = input.trim();
+  return AGENT_PATTERNS.some(pattern => pattern.test(trimmed));
+}
+
 // Basic check: does the input look like it could contain real words?
 // Rejects strings with no vowels, excessive consonant clusters, or common non-place words
 function looksLikeGibberish(text) {
@@ -204,6 +217,26 @@ export default function App() {
     async (interests) => {
       setError(null);
       addSearch(interests);
+
+      // 0. Agent query detection: questions, comparisons, rankings go to the ReAct agent
+      if (isAgentQuery(interests)) {
+        const shortLabel = interests.length > 30 ? interests.slice(0, 30) + '...' : interests;
+        const agentCountry = {
+          name: 'AtlasIQ Agent',
+          code: `_agent_${Date.now()}`,
+          lat: 0,
+          lng: 0,
+          climate: '',
+          safety_index: 0, beach_score: 0, nightlife_score: 0,
+          cost_of_living: 0, sightseeing_score: 0, cultural_score: 0,
+          adventure_score: 0, food_score: 0, infrastructure_score: 0,
+          _chatOnly: true,
+          _placeName: shortLabel,
+          _initialMessage: interests,
+        };
+        addTab(agentCountry);
+        return;
+      }
 
       // 1. Fast static check: continents + dataset countries (instant, no API call)
       const location = detectLocation(interests, countries);

@@ -395,6 +395,37 @@
   font-style: italic;
 }
 
+/* Agent thoughts */
+.country-panel__thoughts {
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 4px;
+}
+
+.country-panel__thoughts summary {
+  font-size: 10px;
+  color: #888;
+  font-style: italic;
+  cursor: pointer;
+  user-select: none;
+}
+
+.country-panel__thoughts summary:hover {
+  color: #aaa;
+}
+
+.country-panel__thoughts ol {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 10px;
+  color: #777;
+  line-height: 1.4;
+}
+
+.country-panel__thoughts li {
+  margin-bottom: 2px;
+}
+
 .country-panel__chat-form {
   display: flex;
   gap: 6px;

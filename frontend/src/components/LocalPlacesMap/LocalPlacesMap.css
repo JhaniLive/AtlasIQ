@@ -442,6 +442,22 @@
   border-color: #00ccff;
 }
 
+/* Leaflet dark theme overrides */
+.leaflet-control-zoom a {
+  background: rgba(15, 15, 30, 0.85) !important;
+  color: #ccc !important;
+  border-color: #444 !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(30, 30, 60, 0.9) !important;
+  color: #fff !important;
+}
+
 /* ===== Mobile (<= 600px) ===== */
 @media (max-width: 600px) {
   .lpm-content {
@@ -463,17 +479,44 @@
     font-size: 14px;
   }
 
+  .lpm-header__close {
+    padding: 6px 10px;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .place-detail {
     bottom: auto;
     top: 10px;
     right: 10px;
     left: 10px;
     width: auto;
-    max-height: 60vh;
+    max-height: 50vh;
   }
 
   .place-card__thumb {
     width: 50px;
     height: 50px;
+  }
+
+  .leaflet-control-zoom a {
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    font-size: 20px !important;
+  }
+}
+
+/* ===== Tiny phones (<= 380px) ===== */
+@media (max-width: 380px) {
+  .lpm-sidebar {
+    max-height: 30vh;
+  }
+
+  .place-detail {
+    max-height: 45vh;
   }
 }

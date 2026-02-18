@@ -326,6 +326,7 @@
   .search-bar__input {
     font-size: 14px;
     padding: 6px 2px;
+    max-height: 80px;
   }
 
   .search-bar__icon-btn {
@@ -353,6 +354,10 @@
     height: 48px;
     border-radius: 10px;
   }
+
+  .search-bar__history {
+    max-height: 150px;
+  }
 }
 
 /* ===== Tiny phones (<= 380px) ===== */
@@ -373,6 +378,10 @@
   .search-bar__icon-btn {
     width: 32px;
     height: 32px;
+  }
+
+  .search-bar__history {
+    max-height: 120px;
   }
 }
 

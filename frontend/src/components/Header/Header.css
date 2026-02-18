@@ -48,6 +48,6 @@
   }
 
   .header__tagline {
-    font-size: 10px;
+    display: none;
   }
 }

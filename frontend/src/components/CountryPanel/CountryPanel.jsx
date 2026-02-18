@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { chatAboutCountry, getPlacePhoto, searchNearbyPlaces } from '../../services/api';
 import './CountryPanel.css';
@@ -34,6 +34,7 @@ export default function CountryPanel({
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [chatFocused, setChatFocused] = useState(false);
   const [position, setPosition] = useState({ x: null, y: null });
   const [size, setSize] = useState({ width: 340, height: null });
   const [photoLoading, setPhotoLoading] = useState(false);
@@ -84,10 +85,11 @@ export default function CountryPanel({
     return () => { cancelled = true; };
   }, [activeTabId, country?.code, country?.name, country?._placeName]);
 
-  // Reset chat input when switching tabs
+  // Reset chat input and chat-focused mode when switching tabs
   useEffect(() => {
     if (activeTabId !== prevTabIdRef.current) {
       setChatInput('');
+      setChatFocused(false);
       prevTabIdRef.current = activeTabId;
     }
   }, [activeTabId]);
@@ -247,16 +249,21 @@ export default function CountryPanel({
       });
 
       // Auto-open map with pins when agent returns places
-      if (res.places?.length > 0 && onShowLocalPlaces) {
+      if (res.places?.length > 0) {
         const first = res.places[0];
         if (first.lat && first.lng) {
-          onShowLocalPlaces({
-            places: res.places,
-            query: msg,
-            center: { lat: first.lat, lng: first.lng },
-          });
-          // Also fly the globe to the places area
-          if (onFlyTo) onFlyTo(first.lat, first.lng);
+          // On mobile: show places inline in chat, just fly globe + show pins
+          // On desktop: open the separate PlacesPanel
+          if (isMobile) {
+            if (onFlyTo) onFlyTo(first.lat, first.lng);
+          } else if (onShowLocalPlaces) {
+            onShowLocalPlaces({
+              places: res.places,
+              query: msg,
+              center: { lat: first.lat, lng: first.lng },
+            });
+            if (onFlyTo) onFlyTo(first.lat, first.lng);
+          }
         }
       }
     } catch {
@@ -292,7 +299,51 @@ export default function CountryPanel({
     return () => clearTimeout(timer);
   }, [activeTabId, country?._initialMessage, sendMessage]);
 
-  const isMobile = useMemo(() => window.innerWidth <= 600, []);
+  // Dynamic isMobile — updates on resize/rotation
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 600);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 600);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // iOS keyboard fix — lift panel above software keyboard
+  useEffect(() => {
+    if (!isMobile) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onVVResize = () => {
+      const keyboardHeight = window.innerHeight - vv.height;
+      const panel = panelRef.current;
+      if (panel) {
+        panel.style.transform = keyboardHeight > 50
+          ? `translateY(-${keyboardHeight}px)` : '';
+      }
+    };
+    vv.addEventListener('resize', onVVResize);
+    return () => vv.removeEventListener('resize', onVVResize);
+  }, [isMobile]);
+
+  // Swipe-down-to-dismiss on mobile
+  const touchStartY = useRef(null);
+  const onTouchStart = useCallback((e) => {
+    if (!isMobile || minimized) return;
+    touchStartY.current = e.touches[0].clientY;
+  }, [isMobile, minimized]);
+
+  const onTouchEnd = useCallback((e) => {
+    if (!isMobile || touchStartY.current === null) return;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartY.current = null;
+    if (deltaY > 80) {
+      // Swiped down — if chat-focused, collapse back to normal first
+      if (chatFocused) {
+        setChatFocused(false);
+      } else if (!minimized) {
+        setMinimized(true);
+      }
+    }
+  }, [isMobile, minimized, chatFocused]);
 
   if (tabs.length === 0) return null;
 
@@ -308,11 +359,13 @@ export default function CountryPanel({
   return (
     <div
       ref={panelRef}
-      className={`country-panel ${minimized ? 'country-panel--minimized' : ''}`}
+      className={`country-panel ${minimized ? 'country-panel--minimized' : ''} ${chatFocused && isMobile ? 'country-panel--chat-focused' : ''}`}
       role="complementary"
       aria-label="Country information"
       style={{ ...posStyle, ...sizeStyle }}
       onMouseDown={onMouseDown}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
       {/* Tab bar */}
       {tabs.length > 1 && (
@@ -353,6 +406,15 @@ export default function CountryPanel({
               </span>
             </div>
             <div className="country-panel__actions">
+              {chatFocused && isMobile && (
+                <button
+                  className="country-panel__collapse-btn"
+                  onClick={() => setChatFocused(false)}
+                  title="Collapse chat"
+                >
+                  &#x25BD;
+                </button>
+              )}
               <button
                 className={`country-panel__bookmark ${isBookmarked?.(country.code) ? 'country-panel__bookmark--active' : ''}`}
                 onClick={() => onBookmarkToggle?.(country)}
@@ -489,13 +551,53 @@ export default function CountryPanel({
                           </ol>
                         </details>
                       )}
-                      {m.places?.length > 0 && onShowLocalPlaces && (
-                        <button
-                          className="country-panel__view-map-btn"
-                          onClick={() => onShowLocalPlaces({ places: m.places })}
-                        >
-                          View {m.places.length} places on globe
-                        </button>
+                      {m.places?.length > 0 && (
+                        isMobile ? (
+                          <div className="country-panel__inline-places">
+                            {m.places.map((place, pi) => {
+                              const dirUrl = place.maps_url ||
+                                (place.lat && place.lng
+                                  ? `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`
+                                  : null);
+                              return (
+                                <div key={place.name + pi} className="country-panel__place-card">
+                                  <div className="country-panel__place-card-header">
+                                    <span className="country-panel__place-card-num">{pi + 1}</span>
+                                    <div className="country-panel__place-card-info">
+                                      <span className="country-panel__place-card-name">{place.name}</span>
+                                      <span className="country-panel__place-card-meta">
+                                        {place.rating > 0 && <span className="country-panel__place-card-rating">{'\u2605'} {place.rating.toFixed(1)}</span>}
+                                        {place.is_open === true && <span className="country-panel__place-card-open">Open</span>}
+                                        {place.is_open === false && <span className="country-panel__place-card-closed">Closed</span>}
+                                      </span>
+                                    </div>
+                                    {dirUrl && (
+                                      <a
+                                        className="country-panel__place-card-dir"
+                                        href={dirUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        &rarr;
+                                      </a>
+                                    )}
+                                  </div>
+                                  {place.address && (
+                                    <span className="country-panel__place-card-addr">{place.address}</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : onShowLocalPlaces ? (
+                          <button
+                            className="country-panel__view-map-btn"
+                            onClick={() => onShowLocalPlaces({ places: m.places })}
+                          >
+                            View {m.places.length} places on globe
+                          </button>
+                        ) : null
                       )}
                     </div>
                   ))}
@@ -536,6 +638,7 @@ export default function CountryPanel({
                 placeholder={`Ask about ${country.name}...`}
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
+                onFocus={() => { if (isMobile) setChatFocused(true); }}
                 disabled={chatLoading}
               />
               <button

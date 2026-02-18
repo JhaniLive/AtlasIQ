@@ -34,6 +34,7 @@ export default function PlacesPanel({ places, onClose, onPlaceSelect, selectedPl
 
   return (
     <div className="places-panel">
+      <div className="places-panel__drag-handle" />
       <div className="places-panel__header">
         <div className="places-panel__header-info">
           <span className="places-panel__count">{places.length}</span>

@@ -814,6 +814,24 @@
     padding: 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     animation: panelSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: default;
+    transition: transform 0.2s ease;
+  }
+
+  .country-panel:active {
+    cursor: default;
+  }
+
+  /* Drag handle pill */
+  .country-panel::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin: 8px auto 0;
+    flex-shrink: 0;
   }
 
   @keyframes panelSlideUp {
@@ -822,12 +840,23 @@
   }
 
   .country-panel__tabs {
-    border-radius: 20px 20px 0 0;
+    border-radius: 0;
   }
 
   .country-panel__tab {
     padding: 12px 14px;
     font-size: 12px;
+  }
+
+  /* Larger tap target for tab close buttons */
+  .country-panel__tab-close {
+    padding: 4px 8px;
+    min-width: 28px;
+    min-height: 28px;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .country-panel__header {
@@ -853,15 +882,30 @@
   .country-panel__minimize,
   .country-panel__close {
     font-size: 18px;
-    padding: 4px 8px;
+    padding: 6px 10px;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .country-panel__bookmark {
+    padding: 6px 10px;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .country-panel__chat-form {
     border-radius: 0;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
   .country-panel--minimized {
-    top: 70px;
+    top: 120px;
     bottom: auto;
     left: 12px;
     right: auto;
@@ -870,6 +914,10 @@
     max-height: none;
     border-radius: 12px;
     animation: none;
+  }
+
+  .country-panel--minimized::before {
+    display: none;
   }
 
   .country-panel--minimized .country-panel__tabs {
@@ -885,6 +933,169 @@
   .country-panel__resize-rb {
     display: none;
   }
+
+  /* ── Chat-focused mode — expands to 90vh, hides non-chat UI ── */
+
+  .country-panel--chat-focused {
+    max-height: 90vh;
+    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .country-panel--chat-focused .country-panel__hero,
+  .country-panel--chat-focused .country-panel__hero--loading,
+  .country-panel--chat-focused .country-panel__score,
+  .country-panel--chat-focused .country-panel__stats-accordion,
+  .country-panel--chat-focused .country-panel__insight,
+  .country-panel--chat-focused .country-panel__pills {
+    display: none;
+  }
+
+  .country-panel--chat-focused .country-panel__header {
+    padding: 6px 16px 4px;
+  }
+
+  .country-panel--chat-focused .country-panel__name {
+    font-size: 15px;
+  }
+
+  .country-panel--chat-focused .country-panel__meta {
+    display: none;
+  }
+
+  .country-panel__collapse-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 16px;
+    padding: 6px 10px;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .country-panel__collapse-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* ============================================================
+   Inline place cards (mobile chat)
+   ============================================================ */
+
+.country-panel__inline-places {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.country-panel__place-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.country-panel__place-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.country-panel__place-card-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(0, 204, 255, 0.12);
+  color: #00ccff;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.country-panel__place-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.country-panel__place-card-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #eee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.country-panel__place-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.country-panel__place-card-rating {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffcc00;
+}
+
+.country-panel__place-card-open {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+}
+
+.country-panel__place-card-closed {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff6b6b;
+}
+
+.country-panel__place-card-dir {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(0, 204, 255, 0.08);
+  border: 1px solid rgba(0, 204, 255, 0.2);
+  color: #00ccff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.country-panel__place-card-dir:hover {
+  background: rgba(0, 204, 255, 0.18);
+}
+
+.country-panel__place-card-addr {
+  display: block;
+  font-size: 11px;
+  color: #777;
+  margin-top: 4px;
+  line-height: 1.3;
 }
 
 /* ============================================================
@@ -897,7 +1108,7 @@
   }
 
   .country-panel--minimized {
-    top: 58px;
+    top: 110px;
   }
 
   .country-panel__header {

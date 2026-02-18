@@ -97,20 +97,21 @@
   .globe-rotate-btn {
     top: 14px;
     right: 14px;
-    width: 38px;
-    height: 38px;
-    font-size: 14px;
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
   }
 
   .globe-zoom {
-    top: 60px;
+    top: auto;
+    bottom: 80px;
     right: 14px;
   }
 
   .globe-zoom__btn {
-    width: 36px;
-    height: 32px;
-    font-size: 18px;
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
   }
 }
 

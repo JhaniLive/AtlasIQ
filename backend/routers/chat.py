@@ -27,7 +27,7 @@ When answering about a specific country, include practical details like:
 - Safety tips
 - Budget expectations
 
-Keep responses concise (3-5 sentences) unless the user asks for detail. Be enthusiastic but factual. Do not use markdown formatting."""
+Keep responses concise (3-5 sentences) unless the user asks for detail. Be enthusiastic but factual. You may use markdown formatting (bullet points, bold, links)."""
 
 
 RESOLVE_SYSTEM = """You are a strict geography resolver. Given a place name (city, landmark, region, etc.), return ONLY a JSON object with these fields:
@@ -152,12 +152,17 @@ class ChatRequest(BaseModel):
     country_name: str = ""
     history: list[ChatMessage] = []
     use_agent: bool = True
+    user_lat: float | None = None
+    user_lng: float | None = None
+    place_lat: float | None = None
+    place_lng: float | None = None
 
 
 class ChatResponse(BaseModel):
     reply: str
     thoughts: list[str] = []
     iterations: int = 0
+    places: list[dict] | None = None
 
 
 MAX_HISTORY = 20
@@ -204,6 +209,11 @@ async def chat(request: Request, req: ChatRequest):
 
     # Current user message with country context
     user_content = f"{context}User says: {req.message}" if context else req.message
+
+    # Inject user coordinates if provided
+    if req.user_lat is not None and req.user_lng is not None:
+        user_content += f"\n[User's current location: lat={req.user_lat}, lng={req.user_lng}]"
+
     history_messages.append({"role": "user", "content": user_content})
 
     try:
@@ -213,11 +223,14 @@ async def chat(request: Request, req: ChatRequest):
                 messages=history_messages,
                 country_code=req.country_code,
                 rag_context=rag_context,
+                place_lat=req.place_lat or 0,
+                place_lng=req.place_lng or 0,
             )
             return ChatResponse(
                 reply=result["reply"],
                 thoughts=result.get("thoughts", []),
                 iterations=result.get("iterations", 0),
+                places=result.get("places"),
             )
         else:
             # Simple chat path — single LLM call, cheaper and faster

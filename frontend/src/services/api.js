@@ -95,13 +95,33 @@ async function _reverseGeocode(lat, lng) {
 }
 export const reverseGeocode = withCache(_reverseGeocode, 'geo');
 
-export async function chatAboutCountry(message, countryCode = '', countryName = '', history = [], useAgent = true) {
-  const { data } = await client.post('/chat', {
+export async function searchNearbyPlaces(query, lat, lng, radius = 5000, maxResults = 10) {
+  const { data } = await client.post('/places/nearby', {
+    query,
+    latitude: lat,
+    longitude: lng,
+    radius,
+    max_results: maxResults,
+  });
+  return data;
+}
+
+export async function chatAboutCountry(message, countryCode = '', countryName = '', history = [], useAgent = true, userLat = null, userLng = null, placeLat = null, placeLng = null) {
+  const body = {
     message,
     country_code: countryCode,
     country_name: countryName,
     history,
     use_agent: useAgent,
-  });
+  };
+  if (userLat != null && userLng != null) {
+    body.user_lat = userLat;
+    body.user_lng = userLng;
+  }
+  if (placeLat != null && placeLng != null) {
+    body.place_lat = placeLat;
+    body.place_lng = placeLng;
+  }
+  const { data } = await client.post('/chat', body);
   return data;
 }

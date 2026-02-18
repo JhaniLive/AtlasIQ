@@ -1,6 +1,15 @@
+import asyncio
 import json
+import logging
+from functools import partial
+
+from ddgs import DDGS
 
 from services.country_service import get_all, get_by_code
+from services.places_service import search_nearby_places as _search_nearby
+from services.weather_service import get_current_weather
+
+logger = logging.getLogger(__name__)
 
 # ── Tool implementations ─────────────────────────────────────────────
 
@@ -125,6 +134,129 @@ async def rank_by_preference(params: dict) -> str:
     return json.dumps({"field": field, "top": results})
 
 
+async def search_nearby_places(params: dict) -> str:
+    """Search for real places/restaurants/attractions using Google Places."""
+    query = params.get("query", "")
+    lat = float(params.get("lat", 0))
+    lng = float(params.get("lng", 0))
+    radius = int(params.get("radius", 0))
+
+    if not query:
+        return json.dumps({"error": "query is required"})
+
+    # When lat/lng are 0 (no user location), set radius=0 so the backend
+    # skips locationBias — Google infers location from the query text itself.
+    if lat == 0 and lng == 0:
+        radius = 0
+
+    places = await _search_nearby(query=query, lat=lat, lng=lng, radius=radius, max_results=10)
+    if not places:
+        return json.dumps({"results": [], "message": "No places found nearby."})
+
+    # Slim output for LLM context
+    slim = []
+    for p in places:
+        entry = {
+            "name": p["name"],
+            "rating": p["rating"],
+            "review_count": p["review_count"],
+            "address": p["address"],
+        }
+        if p.get("is_open") is not None:
+            entry["is_open"] = p["is_open"]
+        slim.append(entry)
+
+    return json.dumps({"results": slim, "total": len(slim)})
+
+
+async def web_search(params: dict) -> str:
+    """Search the web using DuckDuckGo for real-time information."""
+    query = params.get("query", "")
+    max_results = int(params.get("max_results", 5))
+
+    if not query:
+        return json.dumps({"error": "query is required"})
+
+    try:
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(
+            None, partial(_ddgs_text, query, min(max_results, 10))
+        )
+        if not results:
+            return json.dumps({"results": [], "message": "No results found."})
+
+        slim = []
+        for r in results:
+            slim.append({
+                "title": r.get("title", ""),
+                "snippet": r.get("body", ""),
+                "url": r.get("href", ""),
+            })
+        return json.dumps({"results": slim, "total": len(slim)})
+    except Exception as e:
+        logger.exception("Web search failed")
+        return json.dumps({"error": f"Search failed: {str(e)}"})
+
+
+async def news_search(params: dict) -> str:
+    """Search for latest news using DuckDuckGo News."""
+    query = params.get("query", "")
+    max_results = int(params.get("max_results", 5))
+
+    if not query:
+        return json.dumps({"error": "query is required"})
+
+    try:
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(
+            None, partial(_ddgs_news, query, min(max_results, 10))
+        )
+        if not results:
+            return json.dumps({"results": [], "message": "No news found."})
+
+        slim = []
+        for r in results:
+            slim.append({
+                "title": r.get("title", ""),
+                "snippet": r.get("body", ""),
+                "url": r.get("url", ""),
+                "source": r.get("source", ""),
+                "date": r.get("date", ""),
+            })
+        return json.dumps({"results": slim, "total": len(slim)})
+    except Exception as e:
+        logger.exception("News search failed")
+        return json.dumps({"error": f"News search failed: {str(e)}"})
+
+
+async def get_weather(params: dict) -> str:
+    """Get current weather for a location."""
+    location = params.get("location", "")
+    if not location:
+        return json.dumps({"error": "location is required"})
+
+    try:
+        result = await get_current_weather(location)
+        if not result:
+            return json.dumps({"error": f"Could not find weather for '{location}'. Try a more specific location name."})
+        return json.dumps(result)
+    except Exception as e:
+        logger.exception("Weather fetch failed")
+        return json.dumps({"error": f"Weather fetch failed: {str(e)}"})
+
+
+def _ddgs_text(query: str, max_results: int) -> list[dict]:
+    """Sync helper — runs in thread executor."""
+    with DDGS() as ddgs:
+        return list(ddgs.text(query, max_results=max_results))
+
+
+def _ddgs_news(query: str, max_results: int) -> list[dict]:
+    """Sync helper — runs in thread executor."""
+    with DDGS() as ddgs:
+        return list(ddgs.news(query, max_results=max_results))
+
+
 # ── Tool registry ────────────────────────────────────────────────────
 
 TOOLS = [
@@ -167,6 +299,39 @@ TOOLS = [
             "top_n": "(optional) Number of top results to return, default 10",
         },
     },
+    {
+        "name": "search_nearby_places",
+        "description": "Search for real places, restaurants, attractions, sightseeing spots, hotels, cafes, etc. using Google Places. Use this whenever the user asks for specific local businesses, food spots, things to do, sightseeing, or places to visit. Include the location in the query text (e.g. 'biryani restaurants in Hyderabad'). Coordinates are optional — if you have them (from user location), pass them; otherwise just put the location name in the query and Google will find it.",
+        "parameters": {
+            "query": "(required) What to search for INCLUDING the location, e.g. 'biryani restaurants in India', 'sightseeing places in USA', 'coffee shops in Paris'",
+            "lat": "(optional) Latitude — pass if user's location is known, otherwise omit or use 0",
+            "lng": "(optional) Longitude — pass if user's location is known, otherwise omit or use 0",
+            "radius": "(optional) Search radius in meters. Use 5000 for 'near me' queries. Omit or use 0 for city/country queries where location is in the query text",
+        },
+    },
+    {
+        "name": "web_search",
+        "description": "Search the web for real-time information using DuckDuckGo. Use this for current events, recent updates, travel advisories, weather, or any question that needs up-to-date info beyond your training data.",
+        "parameters": {
+            "query": "(required) The search query",
+            "max_results": "(optional) Number of results to return, default 5, max 10",
+        },
+    },
+    {
+        "name": "news_search",
+        "description": "Search for the latest news articles using DuckDuckGo News. Use this when the user asks about latest news, recent events, current happenings, or breaking news about a country or place.",
+        "parameters": {
+            "query": "(required) The news search query, e.g. 'London latest news', 'Japan earthquake'",
+            "max_results": "(optional) Number of results to return, default 5, max 10",
+        },
+    },
+    {
+        "name": "get_weather",
+        "description": "Get current real-time weather for any city or location. Returns temperature, feels-like, humidity, wind, cloud cover, and conditions. Use this whenever the user asks about weather, temperature, climate right now, or 'is it raining/hot/cold in X'.",
+        "parameters": {
+            "location": "(required) City or place name, e.g. 'London', 'Tokyo', 'New York', 'Dubai'",
+        },
+    },
 ]
 
 TOOL_MAP = {
@@ -175,6 +340,10 @@ TOOL_MAP = {
     "compare_countries": compare_countries,
     "get_travel_tips": get_travel_tips,
     "rank_by_preference": rank_by_preference,
+    "search_nearby_places": search_nearby_places,
+    "web_search": web_search,
+    "news_search": news_search,
+    "get_weather": get_weather,
 }
 
 

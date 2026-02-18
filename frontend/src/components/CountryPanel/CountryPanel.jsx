@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { chatAboutCountry, getPlacePhoto } from '../../services/api';
+import ReactMarkdown from 'react-markdown';
+import { chatAboutCountry, getPlacePhoto, searchNearbyPlaces } from '../../services/api';
 import './CountryPanel.css';
 
 const QUICK_TOPICS = [
@@ -23,6 +24,9 @@ export default function CountryPanel({
   getInsightForCountry,
   onBookmarkToggle,
   isBookmarked,
+  onShowLocalPlaces,
+  onFlyTo,
+  requestLocation,
 }) {
   // Per-tab state maps
   const [chatMap, setChatMap] = useState(new Map());
@@ -210,14 +214,51 @@ export default function CountryPanel({
 
     try {
       const code = country.code?.startsWith('_agent_') ? '' : country.code;
-      const name = country.code?.startsWith('_agent_') ? '' : country.name;
-      const res = await chatAboutCountry(msg, code, name, existingMessages);
+      // Include the specific place name (e.g. "Ohio") with the country name
+      // so the agent knows the exact location context
+      const placeName = country._placeName;
+      const countryName = country.code?.startsWith('_agent_') ? '' : country.name;
+      const name = placeName && placeName.toLowerCase() !== countryName.toLowerCase()
+        ? `${placeName}, ${countryName}`
+        : countryName;
+
+      // Get user location for "near me" queries
+      let userLat = null, userLng = null;
+      if (/\bnear\s+me\b/i.test(msg) && requestLocation) {
+        try {
+          const loc = await requestLocation();
+          userLat = loc.lat;
+          userLng = loc.lng;
+        } catch {}
+      }
+
+      const res = await chatAboutCountry(msg, code, name, existingMessages, true, userLat, userLng, country.lat || null, country.lng || null);
       setChatMap(prev => {
         const next = new Map(prev);
         const existing = next.get(activeTabId) || [];
-        next.set(activeTabId, [...existing, { role: 'ai', text: res.reply, thoughts: res.thoughts, iterations: res.iterations }]);
+        next.set(activeTabId, [...existing, {
+          role: 'ai',
+          text: res.reply,
+          thoughts: res.thoughts,
+          iterations: res.iterations,
+          places: res.places || null,
+        }]);
         return next;
       });
+
+      // Auto-open map with pins when agent returns places
+      if (res.places?.length > 0 && onShowLocalPlaces) {
+        const first = res.places[0];
+        if (first.lat && first.lng) {
+          onShowLocalPlaces({
+            places: res.places,
+            query: msg,
+            center: { lat: first.lat, lng: first.lng },
+          });
+          // Also fly the globe to the places area
+          if (onFlyTo) onFlyTo(first.lat, first.lng);
+        }
+      }
     } catch {
       setChatMap(prev => {
         const next = new Map(prev);
@@ -228,7 +269,7 @@ export default function CountryPanel({
     } finally {
       setChatLoading(false);
     }
-  }, [chatLoading, country, activeTabId, chatMap]);
+  }, [chatLoading, country, activeTabId, chatMap, requestLocation, onShowLocalPlaces, onFlyTo]);
 
   const handleChat = useCallback((e) => {
     e.preventDefault();
@@ -336,56 +377,65 @@ export default function CountryPanel({
             </div>
           </div>
 
-          {/* Hero photo */}
-          {!minimized && photo && (
-            <div className="country-panel__photo">
-              <img
-                src={photo.url}
-                alt={country._placeName || country.name}
-                loading="lazy"
-              />
-              {photo.description && (
-                <span className="country-panel__photo-caption">{photo.description}</span>
-              )}
-            </div>
-          )}
-          {!minimized && photoLoading && !photo && (
-            <div className="country-panel__photo country-panel__photo--loading">
-              <div className="country-panel__photo-skeleton" />
-            </div>
-          )}
+        </>
+      )}
 
-          {/* Expandable content */}
-          {!minimized && (
-            <div className="country-panel__body">
+          {/* ── SINGLE SCROLL BODY ── */}
+          {country && !minimized && (
+            <div className="country-panel__scroll-body">
+              {/* Hero photo */}
+              {photo && (
+                <div className="country-panel__hero">
+                  <img
+                    className="country-panel__hero-img"
+                    src={photo.url}
+                    alt={country._placeName || country.name}
+                    loading="lazy"
+                  />
+                  <div className="country-panel__hero-overlay" />
+                  {photo.description && (
+                    <span className="country-panel__hero-caption">{photo.description}</span>
+                  )}
+                </div>
+              )}
+              {photoLoading && !photo && (
+                <div className="country-panel__hero country-panel__hero--loading">
+                  <div className="country-panel__photo-skeleton" />
+                </div>
+              )}
+
               {score !== null && (
-                <div className="country-panel__score">
-                  Match Score: <strong>{score}/10</strong>
+                <div className="country-panel__section country-panel__score">
+                  <span className="country-panel__score-label">Match Score</span>
+                  <strong className="country-panel__score-value">{score}/10</strong>
                 </div>
               )}
 
               {!country._chatOnly && (
-                <div className="country-panel__stats">
-                  <StatBar label="Safety" value={country.safety_index} />
-                  <StatBar label="Beaches" value={country.beach_score} />
-                  <StatBar label="Nightlife" value={country.nightlife_score} />
-                  <StatBar label="Affordability" value={country.cost_of_living} />
-                  <StatBar label="Sightseeing" value={country.sightseeing_score} />
-                  <StatBar label="Culture" value={country.cultural_score} />
-                  <StatBar label="Adventure" value={country.adventure_score} />
-                  <StatBar label="Food" value={country.food_score} />
-                  <StatBar label="Infrastructure" value={country.infrastructure_score} />
-                </div>
+                <details className="country-panel__stats-accordion">
+                  <summary className="country-panel__stats-toggle">Country Scores</summary>
+                  <div className="country-panel__stats">
+                    <StatBar label="Safety" value={country.safety_index} />
+                    <StatBar label="Beaches" value={country.beach_score} />
+                    <StatBar label="Nightlife" value={country.nightlife_score} />
+                    <StatBar label="Affordability" value={country.cost_of_living} />
+                    <StatBar label="Sightseeing" value={country.sightseeing_score} />
+                    <StatBar label="Culture" value={country.cultural_score} />
+                    <StatBar label="Adventure" value={country.adventure_score} />
+                    <StatBar label="Food" value={country.food_score} />
+                    <StatBar label="Infrastructure" value={country.infrastructure_score} />
+                  </div>
+                </details>
               )}
 
               {insight && (
-                <div className="country-panel__insight">
+                <div className="country-panel__section country-panel__insight">
                   <p>{insight}</p>
                 </div>
               )}
 
               {country._chatOnly && messages.length === 0 && (
-                <div className="country-panel__insight">
+                <div className="country-panel__section country-panel__insight">
                   <p>Ask me anything about {country.name} — travel tips, safety, culture, food, and more!</p>
                 </div>
               )}
@@ -411,55 +461,92 @@ export default function CountryPanel({
                 </div>
               )}
 
-              {/* Chat */}
-              <div className="country-panel__chat">
-                {messages.length > 0 && (
-                  <div className="country-panel__messages">
-                    {messages.map((m, i) => (
-                      <div key={i} className={`country-panel__msg country-panel__msg--${m.role}`}>
-                        {m.text}
-                        {m.thoughts?.length > 0 && (
-                          <details className="country-panel__thoughts">
-                            <summary>Agent used {m.iterations || m.thoughts.length} step{(m.iterations || m.thoughts.length) !== 1 ? 's' : ''}</summary>
-                            <ol>
-                              {m.thoughts.map((t, j) => (
-                                <li key={j}>{t}</li>
-                              ))}
-                            </ol>
-                          </details>
-                        )}
+              {/* Chat messages — flow naturally in the scroll body */}
+              {messages.length > 0 && (
+                <div className="country-panel__messages">
+                  {messages.map((m, i) => (
+                    <div key={i} className={`country-panel__msg country-panel__msg--${m.role}`}>
+                      {m.role === 'ai' ? (
+                        <ReactMarkdown
+                          components={{
+                            a: ({ href, children }) => (
+                              <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                            ),
+                          }}
+                        >
+                          {m.text}
+                        </ReactMarkdown>
+                      ) : (
+                        m.text
+                      )}
+                      {m.thoughts?.length > 0 && (
+                        <details className="country-panel__thoughts">
+                          <summary>Agent used {m.iterations || m.thoughts.length} step{(m.iterations || m.thoughts.length) !== 1 ? 's' : ''}</summary>
+                          <ol>
+                            {m.thoughts.map((t, j) => (
+                              <li key={j}>{t}</li>
+                            ))}
+                          </ol>
+                        </details>
+                      )}
+                      {m.places?.length > 0 && onShowLocalPlaces && (
+                        <button
+                          className="country-panel__view-map-btn"
+                          onClick={() => onShowLocalPlaces({ places: m.places })}
+                        >
+                          View {m.places.length} places on globe
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="country-panel__msg country-panel__msg--ai country-panel__msg--typing">
+                      <div className="country-panel__typing-dots">
+                        <span className="country-panel__typing-dot" />
+                        <span className="country-panel__typing-dot" />
+                        <span className="country-panel__typing-dot" />
                       </div>
-                    ))}
-                    {chatLoading && (
-                      <div className="country-panel__msg country-panel__msg--ai country-panel__msg--typing">
-                        Thinking...
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+              {/* Typing dots when no messages yet */}
+              {messages.length === 0 && chatLoading && (
+                <div className="country-panel__messages">
+                  <div className="country-panel__msg country-panel__msg--ai country-panel__msg--typing">
+                    <div className="country-panel__typing-dots">
+                      <span className="country-panel__typing-dot" />
+                      <span className="country-panel__typing-dot" />
+                      <span className="country-panel__typing-dot" />
+                    </div>
                   </div>
-                )}
-                <form className="country-panel__chat-form" onSubmit={handleChat} role="search" aria-label="Chat about this country">
-                  <input
-                    className="country-panel__chat-input"
-                    type="text"
-                    placeholder={`Ask about ${country.name}...`}
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    disabled={chatLoading}
-                  />
-                  <button
-                    className="country-panel__chat-btn"
-                    type="submit"
-                    disabled={!chatInput.trim() || chatLoading}
-                  >
-                    &rarr;
-                  </button>
-                </form>
-              </div>
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
             </div>
           )}
-        </>
-      )}
+
+          {/* Chat form — STICKY at bottom */}
+          {country && !minimized && (
+            <form className="country-panel__chat-form" onSubmit={handleChat} role="search" aria-label="Chat about this country">
+              <input
+                className="country-panel__chat-input"
+                type="text"
+                placeholder={`Ask about ${country.name}...`}
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                disabled={chatLoading}
+              />
+              <button
+                className="country-panel__chat-btn"
+                type="submit"
+                disabled={!chatInput.trim() || chatLoading}
+              >
+                &rarr;
+              </button>
+            </form>
+          )}
 
       {/* Resize handles */}
       <div

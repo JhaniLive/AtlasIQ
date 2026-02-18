@@ -8,8 +8,10 @@ Cesium.Ion.defaultAccessToken = undefined;
 const GEO_JSON_URL =
   'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson';
 
+// ── Globe component ─────────────────────────────────────────────────
+
 const Globe = forwardRef(function Globe(
-  { countries, recommendations, onCountryHover, onCountryClick },
+  { countries, recommendations, onCountryHover, onCountryClick, onPlaceSelect },
   ref,
 ) {
   const containerRef = useRef(null);
@@ -17,14 +19,55 @@ const Globe = forwardRef(function Globe(
   const countryMapRef = useRef({});
   const geoEntitiesRef = useRef({});
   const photoEntitiesRef = useRef(new Map()); // tabId → [entities]
+  const placePinEntitiesRef = useRef([]); // place pin entities
   const [rotating, setRotating] = useState(false);
   const rotatingRef = useRef(false);
   const onCountryClickRef = useRef(onCountryClick);
   const onCountryHoverRef = useRef(onCountryHover);
+  const onPlaceSelectRef = useRef(onPlaceSelect);
 
-  // Keep callback refs fresh
+  // Keep refs fresh
   useEffect(() => { onCountryClickRef.current = onCountryClick; }, [onCountryClick]);
   useEffect(() => { onCountryHoverRef.current = onCountryHover; }, [onCountryHover]);
+  useEffect(() => { onPlaceSelectRef.current = onPlaceSelect; }, [onPlaceSelect]);
+
+  // ── Helper: render a rating pill canvas for a place pin ──────────
+  function renderPinCanvas(rating, selected) {
+    const text = `\u2605 ${rating ? rating.toFixed(1) : '--'}`;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font = 'bold 22px sans-serif';
+    const tw = ctx.measureText(text).width;
+    const pw = Math.ceil(tw + 24);
+    const ph = 36;
+    canvas.width = pw;
+    canvas.height = ph;
+
+    // Pill background
+    const r = ph / 2;
+    ctx.fillStyle = selected ? 'rgba(255, 204, 0, 0.25)' : 'rgba(12, 12, 28, 0.92)';
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.lineTo(pw - r, 0);
+    ctx.arc(pw - r, r, r, -Math.PI / 2, Math.PI / 2);
+    ctx.lineTo(r, ph);
+    ctx.arc(r, r, r, Math.PI / 2, -Math.PI / 2);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = selected ? '#ffcc00' : 'rgba(255, 204, 0, 0.5)';
+    ctx.lineWidth = selected ? 2.5 : 1.5;
+    ctx.stroke();
+
+    // Rating text
+    ctx.fillStyle = selected ? '#ffffff' : '#ffcc00';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, pw / 2, ph / 2);
+
+    return canvas;
+  }
 
   useImperativeHandle(ref, () => ({
     flyTo(lat, lng, altitude = 2500000) {
@@ -43,7 +86,6 @@ const Globe = forwardRef(function Globe(
 
       const markerKey = tabId || '_default';
 
-      // Draw framed photo on a canvas for the billboard
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
@@ -55,7 +97,6 @@ const Globe = forwardRef(function Globe(
         canvas.height = ch;
         const ctx = canvas.getContext('2d');
 
-        // Rounded rect background
         ctx.fillStyle = 'rgba(12, 12, 28, 0.92)';
         ctx.beginPath();
         ctx.moveTo(radius, 0);
@@ -69,12 +110,10 @@ const Globe = forwardRef(function Globe(
         ctx.quadraticCurveTo(0, 0, radius, 0);
         ctx.fill();
 
-        // Border glow
         ctx.strokeStyle = 'rgba(0, 204, 255, 0.5)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Photo (clipped with rounded corners)
         ctx.save();
         const ir = 6;
         ctx.beginPath();
@@ -91,7 +130,6 @@ const Globe = forwardRef(function Globe(
         ctx.drawImage(img, pad, pad, fw, fh);
         ctx.restore();
 
-        // Label text
         if (label) {
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 13px sans-serif';
@@ -108,7 +146,6 @@ const Globe = forwardRef(function Globe(
           ctx.fillText(text, cw / 2, pad + fh + labelH / 2 + 2);
         }
 
-        // Add as billboard entity
         const entity = viewer.entities.add({
           position: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
           billboard: {
@@ -128,7 +165,6 @@ const Globe = forwardRef(function Globe(
         photoEntitiesRef.current.get(markerKey).push(entity);
       };
       img.onerror = () => {
-        // If canvas approach fails (CORS), use plain image URL
         const entity = viewer.entities.add({
           position: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
           billboard: {
@@ -161,7 +197,6 @@ const Globe = forwardRef(function Globe(
       img.src = imageUrl;
     },
 
-    // Remove photo markers for a specific tab
     removePhotoMarker(tabId) {
       const viewer = viewerRef.current;
       if (!viewer) return;
@@ -172,7 +207,6 @@ const Globe = forwardRef(function Globe(
       photoEntitiesRef.current.delete(tabId);
     },
 
-    // Remove all photo markers from the globe
     clearPhotoMarkers() {
       const viewer = viewerRef.current;
       if (!viewer) return;
@@ -184,12 +218,82 @@ const Globe = forwardRef(function Globe(
       photoEntitiesRef.current.clear();
     },
 
-    // Look up any country by name in the GeoJSON data
+    // ── Place pins: show rating pills on the globe ──────────────
+    showPlacePins(places) {
+      const viewer = viewerRef.current;
+      if (!viewer || !places || places.length === 0) return;
+
+      // Clear any existing place pins first
+      this.clearPlacePins();
+
+      const positions = [];
+
+      for (const place of places) {
+        if (!place.lat || !place.lng) continue;
+
+        const canvas = renderPinCanvas(place.rating, false);
+        const position = Cesium.Cartesian3.fromDegrees(place.lng, place.lat, 500);
+        positions.push(position);
+
+        const entity = viewer.entities.add({
+          position,
+          billboard: {
+            image: canvas,
+            width: canvas.width,
+            height: canvas.height,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            scaleByDistance: new Cesium.NearFarScalar(5000, 1.2, 500000, 0.6),
+          },
+          _isPlacePin: true,
+          _placeData: place,
+          _pinCanvas: canvas,
+        });
+        placePinEntitiesRef.current.push(entity);
+      }
+
+      // Fly to fit all pins — zoom in close at city level
+      if (positions.length > 0) {
+        const sphere = Cesium.BoundingSphere.fromPoints(positions);
+        // For city-level clusters, enforce a minimum zoom distance (~15km)
+        // and cap the range so it doesn't zoom out too far
+        const range = Math.max(sphere.radius * 2.5, 5000); // at least 5km
+        const maxRange = 30000; // cap at 30km so pins are clearly visible
+        viewer.camera.flyToBoundingSphere(sphere, {
+          duration: 2.0,
+          offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-35), Math.min(range, maxRange)),
+        });
+      }
+    },
+
+    clearPlacePins() {
+      const viewer = viewerRef.current;
+      if (!viewer) return;
+      for (const entity of placePinEntitiesRef.current) {
+        viewer.entities.remove(entity);
+      }
+      placePinEntitiesRef.current = [];
+    },
+
+    highlightPlacePin(place) {
+      const viewer = viewerRef.current;
+      if (!viewer || !place) return;
+      for (const entity of placePinEntitiesRef.current) {
+        const isMatch = entity._placeData?.name === place.name && entity._placeData?.lat === place.lat;
+        entity.billboard.image = renderPinCanvas(entity._placeData?.rating, isMatch);
+      }
+      if (place.lat && place.lng) {
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(place.lng, place.lat, 5000),
+          duration: 1.0,
+        });
+      }
+    },
+
     lookupCountry(name) {
       const key = name.toLowerCase().trim();
-      // Exact match first
       let entry = geoEntitiesRef.current[key];
-      // Partial match fallback (require at least 4 chars to avoid false positives)
       if (!entry && key.length >= 4) {
         for (const [k, v] of Object.entries(geoEntitiesRef.current)) {
           if (k.length < 4) continue;
@@ -200,7 +304,6 @@ const Globe = forwardRef(function Globe(
         }
       }
       if (!entry) return null;
-      // Try to get coordinates from the GeoJSON entity
       const viewer = viewerRef.current;
       if (!viewer) return { name: entry.name, code: entry.code, lat: 0, lng: 0 };
       const matchName = entry.name.toLowerCase();
@@ -211,7 +314,6 @@ const Globe = forwardRef(function Globe(
           if (entity._geoName && entity._geoName.toLowerCase() === matchName) {
             let lat = 0, lng = 0;
             try {
-              // For polygon entities, compute center from the polygon hierarchy
               const polygon = entity.polygon;
               if (polygon) {
                 const hierarchy = polygon.hierarchy.getValue(Cesium.JulianDate.now());
@@ -279,7 +381,6 @@ const Globe = forwardRef(function Globe(
     viewer.scene.skyAtmosphere.show = true;
     viewer.scene.fog.enabled = false;
 
-    // Keep a ref to the datasource for ray-based lookups
     let geoDataSource = null;
 
     // Load clickable country polygons
@@ -291,7 +392,6 @@ const Globe = forwardRef(function Globe(
     }).then((ds) => {
       geoDataSource = ds;
       viewer.dataSources.add(ds);
-      // Index entities by ISO code and name
       const entities = ds.entities.values;
       for (const entity of entities) {
         const props = entity.properties;
@@ -327,7 +427,6 @@ const Globe = forwardRef(function Globe(
     handler.setInputAction(() => { rotatingRef.current = false; }, Cesium.ScreenSpaceEventType.RIGHT_DOWN);
     handler.setInputAction(() => { if (rotatingRef._enabled) rotatingRef.current = true; }, Cesium.ScreenSpaceEventType.RIGHT_UP);
 
-    // Helper: find GeoJSON entity from a pick list (drillPick results)
     function findGeoEntity(picks) {
       for (const p of picks) {
         if (Cesium.defined(p) && p.id && p.id._geoName) return p.id;
@@ -335,7 +434,13 @@ const Globe = forwardRef(function Globe(
       return null;
     }
 
-    // Helper: find which country polygon contains a cartographic position
+    function findPlacePin(picks) {
+      for (const p of picks) {
+        if (Cesium.defined(p) && p.id && p.id._isPlacePin) return p.id;
+      }
+      return null;
+    }
+
     function findCountryAtPosition(cartesian) {
       if (!geoDataSource || !cartesian) return null;
       try {
@@ -347,7 +452,6 @@ const Globe = forwardRef(function Globe(
           if (!entity._geoName || !entity.polygon) continue;
           const hierarchy = entity.polygon.hierarchy.getValue(Cesium.JulianDate.now());
           if (!hierarchy || !hierarchy.positions || hierarchy.positions.length < 3) continue;
-          // Point-in-polygon test using ray casting on lat/lng
           const pts = hierarchy.positions.map((p) => {
             const c = Cesium.Cartographic.fromCartesian(p);
             return [Cesium.Math.toDegrees(c.longitude), Cesium.Math.toDegrees(c.latitude)];
@@ -358,7 +462,6 @@ const Globe = forwardRef(function Globe(
       return null;
     }
 
-    // Ray-casting point-in-polygon
     function pointInPolygon(x, y, pts) {
       let inside = false;
       for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -371,7 +474,6 @@ const Globe = forwardRef(function Globe(
       return inside;
     }
 
-    // Helper: open country panel for a given entity — always pass click coordinates
     function openCountryForEntity(entity, clickLat, clickLng) {
       const code = entity._geoCode;
       const name = entity._geoName;
@@ -391,14 +493,18 @@ const Globe = forwardRef(function Globe(
       }
     }
 
-    // Hover — show pointer on countries
+    // Hover — pointer on countries AND place pins
     handler.setInputAction((movement) => {
       const picks = viewer.scene.drillPick(movement.endPosition, 5);
+      const placePin = findPlacePin(picks);
+      if (placePin) {
+        viewer.scene.canvas.style.cursor = 'pointer';
+        return;
+      }
       const entity = findGeoEntity(picks);
       if (entity) {
         viewer.scene.canvas.style.cursor = 'pointer';
       } else {
-        // Fallback: check if the globe surface belongs to a country
         const ray = viewer.camera.getPickRay(movement.endPosition);
         const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
         const fallback = findCountryAtPosition(cartesian);
@@ -406,13 +512,38 @@ const Globe = forwardRef(function Globe(
       }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-    // Click — open country panel
+    // Click — place pins FIRST, then country polygons
     handler.setInputAction((movement) => {
-      // Try drillPick first (gets through overlapping imagery)
       const picks = viewer.scene.drillPick(movement.position, 10);
+
+      // Check place pins first
+      const placePin = findPlacePin(picks);
+      if (placePin) {
+        const placeData = placePin._placeData;
+        // Highlight the selected pin, unhighlight others
+        for (const entity of placePinEntitiesRef.current) {
+          entity.billboard.image = renderPinCanvas(
+            entity._placeData?.rating,
+            entity === placePin,
+          );
+        }
+        if (onPlaceSelectRef.current) onPlaceSelectRef.current(placeData);
+        return;
+      }
+
+      // Click on globe background → deselect place pins
+      if (placePinEntitiesRef.current.length > 0) {
+        for (const entity of placePinEntitiesRef.current) {
+          if (entity._placeData) {
+            entity.billboard.image = renderPinCanvas(entity._placeData.rating, false);
+          }
+        }
+        if (onPlaceSelectRef.current) onPlaceSelectRef.current(null);
+      }
+
+      // Country click (existing logic)
       const entity = findGeoEntity(picks);
       if (entity) {
-        // Get click lat/lng for chat-only countries
         let clickLat = 0, clickLng = 0;
         try {
           const ray = viewer.camera.getPickRay(movement.position);
@@ -427,7 +558,7 @@ const Globe = forwardRef(function Globe(
         return;
       }
 
-      // Fallback: ray hit the globe → find which country polygon contains that point
+      // Fallback: ray hit globe
       try {
         const ray = viewer.camera.getPickRay(movement.position);
         const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
@@ -469,6 +600,29 @@ const Globe = forwardRef(function Globe(
       >
         {rotating ? '\u23F8' : '\u25B6'}
       </button>
+
+      {/* Zoom controls */}
+      <div className="globe-zoom">
+        <button
+          className="globe-zoom__btn"
+          onClick={() => {
+            const viewer = viewerRef.current;
+            if (viewer) viewer.camera.zoomIn(viewer.camera.positionCartographic.height * 0.4);
+          }}
+          title="Zoom in"
+          aria-label="Zoom in"
+        >+</button>
+        <button
+          className="globe-zoom__btn"
+          onClick={() => {
+            const viewer = viewerRef.current;
+            if (viewer) viewer.camera.zoomOut(viewer.camera.positionCartographic.height * 0.6);
+          }}
+          title="Zoom out"
+          aria-label="Zoom out"
+        >&minus;</button>
+      </div>
+
       <div ref={containerRef} className="globe-container" />
     </div>
   );

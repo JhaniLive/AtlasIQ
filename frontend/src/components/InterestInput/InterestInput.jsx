@@ -231,21 +231,6 @@ export default function InterestInput({ onSubmit, onImageSubmit, loading, search
           </div>
         )}
 
-        {/* Search history dropdown */}
-        {showHistory && searchHistory?.length > 0 && !imagePreview && (
-          <div className="search-bar__history">
-            <div className="search-bar__history-head">
-              <span>Recent</span>
-              <button type="button" onClick={onClearHistory}>Clear</button>
-            </div>
-            {searchHistory.map((term, i) => (
-              <button key={i} type="button" className="search-bar__history-item" onClick={() => { setText(term); setShowHistory(false); }}>
-                {term}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Main bar */}
         <form className={`search-bar__form ${focused ? 'search-bar__form--focused' : ''}`} onSubmit={handleSubmit}>
           {/* Hidden file input for gallery */}
@@ -347,6 +332,21 @@ export default function InterestInput({ onSubmit, onImageSubmit, loading, search
             </button>
           </div>
         </form>
+
+        {/* Search history dropdown (below bar) */}
+        {showHistory && searchHistory?.length > 0 && !imagePreview && (
+          <div className="search-bar__history">
+            <div className="search-bar__history-head">
+              <span>Recent</span>
+              <button type="button" onClick={onClearHistory}>Clear</button>
+            </div>
+            {searchHistory.map((term, i) => (
+              <button key={i} type="button" className="search-bar__history-item" onMouseDown={(e) => { e.preventDefault(); onSubmit(term); setShowHistory(false); setText(''); }}>
+                {term}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

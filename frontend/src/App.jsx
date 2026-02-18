@@ -3,11 +3,13 @@ import Header from './components/Header/Header';
 import Globe from './components/Globe/Globe';
 import InterestInput from './components/InterestInput/InterestInput';
 import CountryPanel from './components/CountryPanel/CountryPanel';
+import PlacesPanel from './components/PlacesPanel/PlacesPanel';
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen';
-import { getCountries, getRecommendations, resolvePlace, resolvePlaceImage, getPlacePhoto, reverseGeocode } from './services/api';
+import { getCountries, getRecommendations, resolvePlace, resolvePlaceImage, getPlacePhoto, reverseGeocode, searchNearbyPlaces } from './services/api';
 import { useGlobe } from './hooks/useGlobe';
 import { useSearchHistory } from './hooks/useSearchHistory';
 import { useBookmarks } from './hooks/useBookmarks';
+import { useGeolocation } from './hooks/useGeolocation';
 import './App.css';
 
 // Continents with center coordinates
@@ -56,11 +58,47 @@ const AGENT_PATTERNS = [
   /\b(compare|vs\.?|versus|compared to)\b.*\b(and|with|to)\b/i,
   /^(which|what|how|why|who|where|when|is|are|do|does|can|should|rank|list|top|best|worst|safest|cheapest)\b/i,
   /\?$/,
+  // Topic queries that should go to agent, not place resolution
+  /\b(news|weather|forecast|temperature|climate|events?|festivals?|tips?|advice|guide|budget|cost|safety|visa|currency|language|culture|traditions?|history|facts?|trivia)\b/i,
 ];
+
+// Place-related queries that should go through the agent, not recommendations
+const PLACES_PATTERNS = [
+  /\b(restaurants?|food|eat|eating|dine|dining|cafe|cafes|coffee|bakery|bakeries|dessert|brunch|breakfast|lunch|dinner|street\s+food)\b/i,
+  /\b(hotels?|hostels?|resorts?|stays?|accommodation|lodge|motel|guesthouse)\b/i,
+  /\b(shopping|mall|market|bazaar|stores?|boutique|souvenir)\b/i,
+  /\b(attractions?|sightseeing|museums?|temples?|church|mosque|monuments?|landmarks?|parks?|gardens?|zoo|aquarium|palace|fort|castle|gallery|galleries)\b/i,
+  /\b(nightlife|clubs?|disco|lounge|pubs?|bars?|brewery|breweries|rooftop)\b/i,
+  /\b(places?\s+to\s+(visit|go|see|eat|stay|shop|explore))\b/i,
+  /\b(things?\s+to\s+do)\b/i,
+  /\b(where\s+to\s+(eat|stay|shop|visit|go|drink))\b/i,
+  /\b(what\s+to\s+(eat|see|do|visit))\b/i,
+];
+
+const NEAR_ME_PATTERN = /\bnear\s+me\b/i;
+
+// Catches all variations of "where am I" / "find my location" / "which place am I in"
+function isLocateMeQuery(input) {
+  const lower = input.toLowerCase();
+  // Direct phrases
+  if (/\b(locate\s+me|find\s+me|where\s+am\s+i|where\s+i\s+am|where\s+i'?m\s+at)\b/.test(lower)) return true;
+  if (/\b(my\s+(current\s+)?location|my\s+place|my\s+position|current\s+location)\b/.test(lower)) return true;
+  if (/\b(show|find|detect|identify|pinpoint|tell)\b.*(my\s+location|where\s+i)/.test(lower)) return true;
+  // "which/what place/city/country am I in" or "i'm in"
+  if (/\b(which|what)\b.*(place|city|country|location)\b.*(am\s+i|i'?m)\s+in\b/.test(lower)) return true;
+  // "find out where I am"
+  if (/\bfind\s+(out\s+)?where\s+i\b/.test(lower)) return true;
+  // "what is my location"
+  if (/\bwhat\s+is\s+my\s+(location|position|place)\b/.test(lower)) return true;
+  // "am I in" as a question about current position (e.g. "what country am I in")
+  if (/\b(what|which)\b.*\bam\s+i\s+in\b/.test(lower)) return true;
+  return false;
+}
 
 function isAgentQuery(input) {
   const trimmed = input.trim();
-  return AGENT_PATTERNS.some(pattern => pattern.test(trimmed));
+  return AGENT_PATTERNS.some(pattern => pattern.test(trimmed))
+    || PLACES_PATTERNS.some(pattern => pattern.test(trimmed));
 }
 
 // Basic check: does the input look like it could contain real words?
@@ -124,8 +162,12 @@ export default function App() {
     getInsightForCountry,
   } = useGlobe();
 
+  const [activePlaces, setActivePlaces] = useState(null);
+  const [selectedPlace, setSelectedPlace] = useState(null);
+
   const { history: searchHistory, addSearch, clearHistory } = useSearchHistory();
   const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
+  const { requestLocation } = useGeolocation();
 
   useEffect(() => {
     getCountries()
@@ -213,67 +255,148 @@ export default function App() {
     [countries, pinPhotoOnGlobe, addTab],
   );
 
+  // Helper: open a generic agent chat tab (no globe navigation)
+  const _openAgentTab = useCallback((query) => {
+    const shortLabel = query.length > 30 ? query.slice(0, 30) + '...' : query;
+    addTab({
+      name: 'AtlasIQ Agent',
+      code: `_agent_${Date.now()}`,
+      lat: 0, lng: 0, climate: '',
+      safety_index: 0, beach_score: 0, nightlife_score: 0,
+      cost_of_living: 0, sightseeing_score: 0, cultural_score: 0,
+      adventure_score: 0, food_score: 0, infrastructure_score: 0,
+      _chatOnly: true,
+      _placeName: shortLabel,
+      _initialMessage: query,
+    });
+  }, [addTab]);
+
   const handleExplore = useCallback(
     async (interests) => {
       setError(null);
       addSearch(interests);
 
-      // 0. Agent query detection: questions, comparisons, rankings go to the ReAct agent
-      if (isAgentQuery(interests)) {
-        const shortLabel = interests.length > 30 ? interests.slice(0, 30) + '...' : interests;
-        const agentCountry = {
-          name: 'AtlasIQ Agent',
-          code: `_agent_${Date.now()}`,
-          lat: 0,
-          lng: 0,
-          climate: '',
-          safety_index: 0, beach_score: 0, nightlife_score: 0,
-          cost_of_living: 0, sightseeing_score: 0, cultural_score: 0,
-          adventure_score: 0, food_score: 0, infrastructure_score: 0,
-          _chatOnly: true,
-          _placeName: shortLabel,
-          _initialMessage: interests,
-        };
-        addTab(agentCountry);
+      // 0. "Near me" detection: local places search with geolocation
+      if (NEAR_ME_PATTERN.test(interests)) {
+        setLoading(true);
+        try {
+          const { lat, lng } = await requestLocation();
+          const data = await searchNearbyPlaces(interests, lat, lng);
+          if (data.places && data.places.length > 0) {
+            globeRef.current?.flyTo(lat, lng);
+            globeRef.current?.showPlacePins(data.places);
+            setActivePlaces(data.places);
+            setSelectedPlace(null);
+          } else {
+            setError('No places found near your location. Try a different search.');
+          }
+        } catch (err) {
+          setError(err.message || 'Failed to search nearby places');
+        } finally {
+          setLoading(false);
+        }
         return;
       }
 
-      // 1. Fast static check: continents + dataset countries (instant, no API call)
+      // 0b. "Locate me" / "where am I" detection: fly to user's position
+      if (isLocateMeQuery(interests)) {
+        setLoading(true);
+        try {
+          const { lat, lng } = await requestLocation();
+          globeRef.current?.flyTo(lat, lng);
+          const placeName = await reverseGeocode(lat, lng);
+          // Find the country from reverse geocode or just show the location
+          const resolved = await resolvePlace(placeName || `${lat},${lng}`);
+          if (resolved && resolved.name) {
+            navigateToResolved(resolved);
+          } else if (placeName) {
+            // Couldn't resolve to a country, but we have a place name
+            setError(null);
+          }
+        } catch (err) {
+          setError(err.message || 'Failed to get your location. Please enable location permissions.');
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // ── Step 1: Try to find a location in the query ──
+      // This works for ALL query types: "go to London", "best biryani in Hyderabad",
+      // "compare Japan and Thailand", "sightseeing in USA", etc.
+      const agentQuery = isAgentQuery(interests);
+
+      // 1a. Fast static check: continents + dataset countries (instant)
       const location = detectLocation(interests, countries);
       if (location) {
         if (location.type === 'country') {
-          const tabId = addTab(location.country);
-          if (globeRef.current) {
-            globeRef.current.flyTo(location.country.lat, location.country.lng);
+          // For agent queries: navigate AND start agent chat
+          if (agentQuery) {
+            // Agent will handle places search via CountryPanel's auto-send
+            // (react_agent pre-calls Google Places with proper location context)
+            const countryWithChat = { ...location.country, _initialMessage: interests };
+            addTab(countryWithChat);
+            if (globeRef.current) globeRef.current.flyTo(location.country.lat, location.country.lng);
+            pinPhotoOnGlobe(location.country.lat, location.country.lng, null, location.country.name);
+          } else {
+            // Simple navigation
+            const tabId = addTab(location.country);
+            if (globeRef.current) globeRef.current.flyTo(location.country.lat, location.country.lng);
+            pinPhotoOnGlobe(location.country.lat, location.country.lng, null, location.country.name, tabId);
           }
-          pinPhotoOnGlobe(location.country.lat, location.country.lng, null, location.country.name, tabId);
         } else {
-          if (globeRef.current) {
-            globeRef.current.flyTo(location.lat, location.lng, location.alt);
-          }
+          // Continent
+          if (globeRef.current) globeRef.current.flyTo(location.lat, location.lng, location.alt);
         }
         return;
       }
 
-      // 2. AI resolution: let the AI figure out if this is a place (city, landmark, country, region)
+      // 1b. AI resolution: try to find a place/city/landmark in the query
       const place = extractPlace(interests);
-      if (looksLikeGibberish(place)) {
-        setError('That doesn\'t look like a real place. Try a city, country, or landmark name.');
-        return;
-      }
-      setLoading(true);
-      try {
-        const resolved = await resolvePlace(place);
-        if (resolved && resolved.name) {
-          navigateToResolved(resolved);
-          setLoading(false);
-          return;
+      const gibberish = looksLikeGibberish(place);
+
+      // For agent queries, always try AI resolution (send full sentence so AI
+      // can extract "Hyderabad" from "best biryani in Hyderabad")
+      if (!gibberish || agentQuery) {
+        setLoading(true);
+        try {
+          const resolved = await resolvePlace(agentQuery ? interests : place);
+          if (resolved && resolved.name) {
+            // Agent will handle places search via CountryPanel's auto-send
+            navigateToResolved(resolved, agentQuery ? interests : null);
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error('[AtlasIQ] resolvePlace failed:', err?.response?.status || err?.message || err);
+          // If API key is invalid (401), show clear error and stop
+          if (err?.response?.status === 401) {
+            setError('API key is invalid or expired. Please update your OpenRouter API key.');
+            setLoading(false);
+            return;
+          }
+          // Otherwise fall through
         }
-      } catch {
-        // AI resolution failed — fall through to recommendations
       }
 
-      // 3. Recommendation flow: AI didn't recognize a specific place, treat as interest query
+      // ── Step 2: No location found ──
+
+      // Agent query with no resolvable location → agent-only chat
+      if (agentQuery) {
+        _openAgentTab(interests);
+        setLoading(false);
+        return;
+      }
+
+      // Non-agent gibberish → error
+      if (gibberish) {
+        setError('That doesn\'t look like a real place. Try a city, country, or landmark name.');
+        setLoading(false);
+        return;
+      }
+
+      // 3. Recommendation flow: treat as interest query
+      if (!loading) setLoading(true);
       try {
         const data = await getRecommendations(interests);
         setRecommendations(data);
@@ -290,13 +413,18 @@ export default function App() {
             pinPhotoOnGlobe(topCountry.lat, topCountry.lng, null, topCountry.name, tabId);
           }
         }
-      } catch {
-        setError('Failed to get recommendations. Check your API key and try again.');
+      } catch (err) {
+        const status = err?.response?.status;
+        if (status === 401) {
+          setError('API key is invalid or expired. Please update your OpenRouter API key.');
+        } else {
+          setError('Failed to get recommendations. Check your API key and try again.');
+        }
       } finally {
         setLoading(false);
       }
     },
-    [countries, pinPhotoOnGlobe, addTab, navigateToResolved],
+    [countries, pinPhotoOnGlobe, addTab, navigateToResolved, _openAgentTab],
   );
 
   const handleImageExplore = useCallback(
@@ -343,7 +471,35 @@ export default function App() {
   const handleTabClose = useCallback((tabId) => {
     removeTab(tabId);
     globeRef.current?.removePhotoMarker(tabId);
+    globeRef.current?.clearPlacePins();
+    setActivePlaces(null);
+    setSelectedPlace(null);
   }, [removeTab]);
+
+  // Allow CountryPanel to fly the globe (e.g. when agent finds places)
+  const handleFlyTo = useCallback((lat, lng) => {
+    if (globeRef.current && lat && lng) globeRef.current.flyTo(lat, lng);
+  }, []);
+
+  // Pin places on the 3D globe + show PlacesPanel
+  const handleShowPlacePins = useCallback((data) => {
+    if (data?.places?.length > 0) {
+      globeRef.current?.showPlacePins(data.places);
+      setActivePlaces(data.places);
+      setSelectedPlace(null);
+    }
+  }, []);
+
+  const handleClearPlaces = useCallback(() => {
+    globeRef.current?.clearPlacePins();
+    setActivePlaces(null);
+    setSelectedPlace(null);
+  }, []);
+
+  const handlePlaceSelect = useCallback((place) => {
+    setSelectedPlace(place);
+    if (place) globeRef.current?.highlightPlacePin(place);
+  }, []);
 
   const handleWelcomeDone = useCallback(() => {
     sessionStorage.setItem('atlasiq_welcomed', '1');
@@ -362,6 +518,7 @@ export default function App() {
         recommendations={recommendations}
         onCountryHover={setHoveredCountry}
         onCountryClick={handleCountryClick}
+        onPlaceSelect={handlePlaceSelect}
       />
 
       <InterestInput
@@ -382,7 +539,19 @@ export default function App() {
         getInsightForCountry={getInsightForCountry}
         onBookmarkToggle={toggleBookmark}
         isBookmarked={isBookmarked}
+        onShowLocalPlaces={handleShowPlacePins}
+        onFlyTo={handleFlyTo}
+        requestLocation={requestLocation}
       />
+
+      {activePlaces && (
+        <PlacesPanel
+          places={activePlaces}
+          onClose={handleClearPlaces}
+          onPlaceSelect={handlePlaceSelect}
+          selectedPlace={selectedPlace}
+        />
+      )}
 
       {loading && (
         <div className="app__loading">

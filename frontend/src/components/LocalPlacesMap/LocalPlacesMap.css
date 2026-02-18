@@ -1,0 +1,479 @@
+/* Full-screen overlay */
+.lpm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 8, 20, 0.98);
+  animation: lpmFadeIn 0.3s ease;
+}
+
+@keyframes lpmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Header */
+.lpm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(12, 12, 28, 0.95);
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+
+.lpm-header__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lpm-header__count {
+  font-size: 12px;
+  color: #00ff88;
+  flex-shrink: 0;
+}
+
+.lpm-header__close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.lpm-header__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Content: sidebar + map */
+.lpm-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.lpm-sidebar {
+  width: 320px;
+  overflow-y: auto;
+  padding: 8px;
+  background: rgba(12, 12, 28, 0.9);
+  border-right: 1px solid #222;
+  flex-shrink: 0;
+}
+
+.lpm-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.lpm-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lpm-sidebar::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 2px;
+}
+
+/* Map area */
+.lpm-map-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.lpm-map-container {
+  width: 100%;
+  height: 100%;
+}
+
+.lpm-map-loading,
+.lpm-map-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 14px;
+}
+
+.lpm-map-error {
+  color: #ff6b6b;
+  padding: 20px;
+  text-align: center;
+}
+
+/* Place card (sidebar) */
+.place-card {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+
+.place-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.place-card--selected {
+  background: rgba(0, 204, 255, 0.08);
+  border-color: rgba(0, 204, 255, 0.3);
+}
+
+.place-card__thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.place-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.place-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.place-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #eee;
+  margin: 0 0 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.place-card__rating-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.place-card__rating-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffcc00;
+}
+
+.place-card__reviews {
+  font-size: 10px;
+  color: #777;
+}
+
+.place-card__address {
+  font-size: 10px;
+  color: #888;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.place-card__tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.place-card__tag {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #999;
+}
+
+.place-card__tag--open {
+  color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.place-card__tag--closed {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+}
+
+/* Star rating */
+.star-rating {
+  display: inline-flex;
+  gap: 0;
+  line-height: 1;
+}
+
+.star {
+  font-size: 11px;
+}
+
+.star--full {
+  color: #ffcc00;
+}
+
+.star--half {
+  color: #ffcc00;
+  opacity: 0.6;
+}
+
+.star--empty {
+  color: #444;
+}
+
+/* Price level */
+.price-level {
+  font-size: 10px;
+  color: #00ff88;
+  font-weight: 600;
+}
+
+/* Map markers */
+.lpm-pin-marker {
+  cursor: pointer;
+  z-index: 1;
+}
+
+.lpm-pin-rating {
+  display: inline-block;
+  padding: 3px 8px;
+  background: rgba(12, 12, 28, 0.85);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffcc00;
+  white-space: nowrap;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.lpm-pin-marker:hover .lpm-pin-rating {
+  transform: scale(1.1);
+  border-color: #ffcc00;
+}
+
+/* User location marker */
+.lpm-user-marker {
+  position: relative;
+  width: 16px;
+  height: 16px;
+}
+
+.lpm-user-dot {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #00aaff;
+  border: 2px solid #fff;
+  z-index: 2;
+}
+
+.lpm-user-pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: rgba(0, 170, 255, 0.3);
+  animation: lpmPulse 2s ease-out infinite;
+  z-index: 1;
+}
+
+@keyframes lpmPulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* Place detail (map overlay) */
+.place-detail {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 300px;
+  max-height: calc(100% - 40px);
+  overflow-y: auto;
+  background: rgba(12, 12, 28, 0.95);
+  border: 1px solid #333;
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  animation: lpmSlideUp 0.25s ease;
+  z-index: 10;
+}
+
+@keyframes lpmSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.place-detail__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: #aaa;
+  font-size: 18px;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: color 0.15s, background 0.15s;
+}
+
+.place-detail__close:hover {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.place-detail__photo {
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  border-radius: 14px 14px 0 0;
+}
+
+.place-detail__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.place-detail__body {
+  padding: 12px 14px;
+}
+
+.place-detail__name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 6px;
+}
+
+.place-detail__rating-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.place-detail__rating-num {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffcc00;
+}
+
+.place-detail__reviews {
+  font-size: 11px;
+  color: #777;
+}
+
+.place-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.place-detail__tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #aaa;
+}
+
+.place-detail__tag--open {
+  color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.place-detail__tag--closed {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.place-detail__address {
+  font-size: 12px;
+  color: #999;
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.place-detail__maps-link {
+  display: inline-block;
+  padding: 6px 14px;
+  background: rgba(0, 204, 255, 0.12);
+  border: 1px solid rgba(0, 204, 255, 0.3);
+  border-radius: 8px;
+  color: #00ccff;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.place-detail__maps-link:hover {
+  background: rgba(0, 204, 255, 0.2);
+  border-color: #00ccff;
+}
+
+/* ===== Mobile (<= 600px) ===== */
+@media (max-width: 600px) {
+  .lpm-content {
+    flex-direction: column-reverse;
+  }
+
+  .lpm-sidebar {
+    width: 100%;
+    max-height: 35vh;
+    border-right: none;
+    border-top: 1px solid #222;
+  }
+
+  .lpm-header {
+    padding: 10px 14px;
+  }
+
+  .lpm-header__title {
+    font-size: 14px;
+  }
+
+  .place-detail {
+    bottom: auto;
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: 60vh;
+  }
+
+  .place-card__thumb {
+    width: 50px;
+    height: 50px;
+  }
+}

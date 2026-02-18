@@ -6,11 +6,17 @@ from pathlib import Path
 
 
 class Settings(BaseSettings):
+    # Primary LLM provider (Groq)
     openrouter_api_key: str = ""
-    openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    default_model: str = "openai/gpt-4o-mini"
+    openrouter_base_url: str = "https://api.groq.com/openai/v1"
+    default_model: str = "llama-3.3-70b-versatile"
+    # Fallback LLM provider (OpenRouter)
+    fallback_api_key: str = ""
+    fallback_base_url: str = "https://openrouter.ai/api/v1"
+    fallback_model: str = "google/gemma-3-27b-it:free"
     cors_origins_raw: str = "http://localhost:5173,http://127.0.0.1:5173"
     cache_ttl_seconds: int = 300
+    google_places_api_key: str = ""
 
     @computed_field
     @property

@@ -12,6 +12,7 @@ export default defineConfig({
       '/recommendations': 'http://localhost:8000',
       '/chat': 'http://localhost:8000',
       '/resolve-place': 'http://localhost:8000',
+      '/places': 'http://localhost:8000',
     },
   },
 });

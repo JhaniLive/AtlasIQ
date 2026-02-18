@@ -2,7 +2,7 @@
 
 .search-bar {
   position: fixed;
-  bottom: 24px;
+  top: 80px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
@@ -12,7 +12,6 @@
   flex-direction: column;
   gap: 8px;
   align-items: stretch;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* The unified bar */
@@ -21,16 +20,24 @@
   align-items: flex-end;
   gap: 0;
   background: rgba(18, 18, 36, 0.92);
-  border: 1px solid #2a2a3e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
   padding: 6px 6px 6px 4px;
   backdrop-filter: blur(16px);
-  transition: border-color 0.2s;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  outline: none;
 }
 
 .search-bar__form:focus-within,
 .search-bar__form--focused {
-  border-color: #00ff88;
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Kill all native focus outlines inside search bar */
+.search-bar__form *:focus {
+  outline: none !important;
 }
 
 /* Icon buttons — shared base */
@@ -79,7 +86,7 @@
 /* Attach menu popup */
 .search-bar__attach-menu {
   position: absolute;
-  bottom: calc(100% + 10px);
+  top: calc(100% + 10px);
   left: 0;
   background: rgba(18, 18, 36, 0.96);
   border: 1px solid #2a2a3e;
@@ -96,7 +103,7 @@
 }
 
 @keyframes menuFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -307,7 +314,7 @@
 /* ===== Mobile (<= 600px) ===== */
 @media (max-width: 600px) {
   .search-bar {
-    bottom: 12px;
+    top: 60px;
     width: 95%;
   }
 
@@ -352,7 +359,7 @@
 @media (max-width: 380px) {
   .search-bar {
     width: 97%;
-    bottom: 8px;
+    top: 50px;
   }
 
   .search-bar__form {

@@ -5,11 +5,13 @@ import InterestInput from './components/InterestInput/InterestInput';
 import CountryPanel from './components/CountryPanel/CountryPanel';
 import PlacesPanel from './components/PlacesPanel/PlacesPanel';
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen';
+import TripSummaryPanel from './components/TripSummaryPanel/TripSummaryPanel';
 import { getCountries, getRecommendations, resolvePlace, resolvePlaceImage, getPlacePhoto, reverseGeocode, searchNearbyPlaces } from './services/api';
 import { useGlobe } from './hooks/useGlobe';
 import { useSearchHistory } from './hooks/useSearchHistory';
 import { useBookmarks } from './hooks/useBookmarks';
 import { useGeolocation } from './hooks/useGeolocation';
+import { useTripSummary } from './hooks/useTripSummary';
 import './App.css';
 
 // Continents with center coordinates
@@ -164,10 +166,18 @@ export default function App() {
 
   const [activePlaces, setActivePlaces] = useState(null);
   const [selectedPlace, setSelectedPlace] = useState(null);
+  const [chatMap, setChatMap] = useState(new Map());
+  const [showSummary, setShowSummary] = useState(false);
 
   const { history: searchHistory, addSearch, clearHistory } = useSearchHistory();
   const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
   const { requestLocation } = useGeolocation();
+
+  const {
+    summaryItems, itemCount, userName, setUserName,
+    aiConclusion, conclusionLoading, toggleItem, removeItem,
+    generateConclusion, getIncludedItems,
+  } = useTripSummary({ openTabs, chatMap, bookmarks, searchHistory });
 
   useEffect(() => {
     getCountries()
@@ -542,6 +552,8 @@ export default function App() {
         onShowLocalPlaces={handleShowPlacePins}
         onFlyTo={handleFlyTo}
         requestLocation={requestLocation}
+        chatMap={chatMap}
+        setChatMap={setChatMap}
       />
 
       {activePlaces && (
@@ -550,6 +562,29 @@ export default function App() {
           onClose={handleClearPlaces}
           onPlaceSelect={handlePlaceSelect}
           selectedPlace={selectedPlace}
+        />
+      )}
+
+      {!showSummary && itemCount > 0 && (
+        <button className="trip-fab" onClick={() => setShowSummary(true)} title="Trip Summary">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 2H12L15 5V16H3V2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/><path d="M6 9H12M6 12H10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+          <span>Summary</span>
+          <span className="trip-fab__badge">{itemCount}</span>
+        </button>
+      )}
+
+      {showSummary && (
+        <TripSummaryPanel
+          items={summaryItems}
+          userName={userName}
+          onSetUserName={setUserName}
+          aiConclusion={aiConclusion}
+          conclusionLoading={conclusionLoading}
+          onToggleItem={toggleItem}
+          onRemoveItem={removeItem}
+          onGenerateConclusion={generateConclusion}
+          onClose={() => setShowSummary(false)}
+          getIncludedItems={getIncludedItems}
         />
       )}
 

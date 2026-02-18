@@ -27,9 +27,10 @@ export default function CountryPanel({
   onShowLocalPlaces,
   onFlyTo,
   requestLocation,
+  chatMap,
+  setChatMap,
 }) {
   // Per-tab state maps
-  const [chatMap, setChatMap] = useState(new Map());
   const [photoMap, setPhotoMap] = useState(new Map());
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);

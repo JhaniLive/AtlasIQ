@@ -80,6 +80,81 @@
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* ── Trip Summary FAB ────────────────────────────────────── */
+
+.trip-fab {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 220;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: rgba(12, 12, 28, 0.9);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 16px;
+  color: #00ff88;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  animation: fabIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fabIn {
+  from { opacity: 0; transform: scale(0.8) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.trip-fab:hover {
+  background: rgba(12, 12, 28, 0.95);
+  border-color: #00ff88;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+.trip-fab:active {
+  transform: translateY(0);
+}
+
+.trip-fab__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: rgba(0, 255, 136, 0.15);
+  color: #00ff88;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .trip-fab {
+    bottom: 80px;
+    left: 16px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 12px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 380px) {
+  .trip-fab {
+    bottom: 70px;
+    left: 10px;
+    padding: 8px 12px;
+  }
+}
+
 @media (max-width: 600px) {
   .app__loading {
     padding: 24px 32px;

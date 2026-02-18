@@ -125,3 +125,8 @@ export async function chatAboutCountry(message, countryCode = '', countryName = 
   const { data } = await client.post('/chat', body);
   return data;
 }
+
+export async function generateTripSummary(tripData) {
+  const { data } = await client.post('/trip-summary', tripData);
+  return data;
+}

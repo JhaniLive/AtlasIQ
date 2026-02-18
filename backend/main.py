@@ -5,7 +5,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from config import settings
-from routers import health, countries, recommendations, chat, places
+from routers import health, countries, recommendations, chat, places, summary
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -27,6 +27,7 @@ app.include_router(countries.router)
 app.include_router(recommendations.router)
 app.include_router(chat.router)
 app.include_router(places.router)
+app.include_router(summary.router)
 
 
 @app.get("/")

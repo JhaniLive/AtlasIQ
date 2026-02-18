@@ -11,6 +11,8 @@
   "dependencies": {
     "axios": "^1.7.9",
     "cesium": "^1.138.0",
+    "jspdf": "^4.1.0",
+    "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4",
     "mapbox-gl": "^3.18.1",
     "react": "^18.3.1",

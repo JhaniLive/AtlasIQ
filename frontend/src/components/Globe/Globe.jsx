@@ -376,8 +376,8 @@ const Globe = forwardRef(function Globe(
     // Globe visuals
     viewer.scene.globe.enableLighting = false;
     viewer.scene.globe.showGroundAtmosphere = true;
-    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#0d1b2a');
-    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#000008');
+    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#1a3a5c');
+    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#060d1a');
     viewer.scene.skyAtmosphere.show = true;
     viewer.scene.fog.enabled = false;
 
@@ -385,9 +385,9 @@ const Globe = forwardRef(function Globe(
 
     // Load clickable country polygons
     Cesium.GeoJsonDataSource.load(GEO_JSON_URL, {
-      fill: Cesium.Color.WHITE.withAlpha(0.04),
-      stroke: Cesium.Color.TRANSPARENT,
-      strokeWidth: 0,
+      fill: Cesium.Color.WHITE.withAlpha(0.06),
+      stroke: Cesium.Color.fromAlpha(Cesium.Color.WHITE, 0.08),
+      strokeWidth: 1,
       clampToGround: true,
     }).then((ds) => {
       geoDataSource = ds;

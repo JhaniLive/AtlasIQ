@@ -809,13 +809,13 @@
     left: 0;
     right: 0;
     width: 100%;
-    max-height: 60vh;
+    max-height: 90vh;
     border-radius: 20px 20px 0 0;
     padding: 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     animation: panelSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     cursor: default;
-    transition: transform 0.2s ease;
+    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease;
   }
 
   .country-panel:active {
@@ -905,27 +905,31 @@
   }
 
   .country-panel--minimized {
-    top: 120px;
-    bottom: auto;
-    left: 12px;
-    right: auto;
-    width: auto;
-    max-width: calc(100% - 24px);
+    bottom: 0;
+    top: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
     max-height: none;
-    border-radius: 12px;
+    border-radius: 20px 20px 0 0;
     animation: none;
-  }
-
-  .country-panel--minimized::before {
-    display: none;
+    cursor: pointer;
   }
 
   .country-panel--minimized .country-panel__tabs {
-    border-radius: 12px 12px 0 0;
+    border-radius: 0;
+  }
+
+  .country-panel--minimized .country-panel__header {
+    padding: 8px 16px 10px;
   }
 
   .country-panel--minimized .country-panel__name {
-    font-size: 14px;
+    font-size: 15px;
+  }
+
+  .country-panel--minimized .country-panel__actions {
+    gap: 0;
   }
 
   .country-panel__resize-r,
@@ -934,12 +938,7 @@
     display: none;
   }
 
-  /* ── Chat-focused mode — expands to 90vh, hides non-chat UI ── */
-
-  .country-panel--chat-focused {
-    max-height: 90vh;
-    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
+  /* ── Chat-focused mode — hides non-chat UI for more chat space ── */
 
   .country-panel--chat-focused .country-panel__hero,
   .country-panel--chat-focused .country-panel__hero--loading,
@@ -1104,11 +1103,7 @@
 
 @media (max-width: 380px) {
   .country-panel {
-    max-height: 55vh;
-  }
-
-  .country-panel--minimized {
-    top: 110px;
+    max-height: 90vh;
   }
 
   .country-panel__header {
@@ -1117,10 +1112,6 @@
 
   .country-panel__name {
     font-size: 16px;
-  }
-
-  .country-panel--minimized .country-panel__name {
-    font-size: 13px;
   }
 
   .country-panel__hero {

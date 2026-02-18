@@ -34,7 +34,7 @@ export default function CountryPanel({
   const [photoMap, setPhotoMap] = useState(new Map());
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(window.innerWidth <= 600);
   const [chatFocused, setChatFocused] = useState(false);
   const [position, setPosition] = useState({ x: null, y: null });
   const [size, setSize] = useState({ width: 340, height: null });
@@ -325,26 +325,26 @@ export default function CountryPanel({
     return () => vv.removeEventListener('resize', onVVResize);
   }, [isMobile]);
 
-  // Swipe-down-to-dismiss on mobile
+  // Swipe gestures on mobile — swipe down to peek, swipe up to expand
   const touchStartY = useRef(null);
   const onTouchStart = useCallback((e) => {
-    if (!isMobile || minimized) return;
+    if (!isMobile) return;
     touchStartY.current = e.touches[0].clientY;
-  }, [isMobile, minimized]);
+  }, [isMobile]);
 
   const onTouchEnd = useCallback((e) => {
     if (!isMobile || touchStartY.current === null) return;
     const deltaY = e.changedTouches[0].clientY - touchStartY.current;
     touchStartY.current = null;
-    if (deltaY > 80) {
-      // Swiped down — if chat-focused, collapse back to normal first
-      if (chatFocused) {
-        setChatFocused(false);
-      } else if (!minimized) {
-        setMinimized(true);
-      }
+    if (deltaY > 80 && !minimized) {
+      // Swiped down — collapse to peek
+      setChatFocused(false);
+      setMinimized(true);
+    } else if (deltaY < -60 && minimized) {
+      // Swiped up from peek — expand
+      setMinimized(false);
     }
-  }, [isMobile, minimized, chatFocused]);
+  }, [isMobile, minimized]);
 
   if (tabs.length === 0) return null;
 
@@ -394,17 +394,22 @@ export default function CountryPanel({
       {/* Header — always visible */}
       {country && (
         <>
-          <div className="country-panel__header">
+          <div
+            className="country-panel__header"
+            onClick={() => { if (isMobile && minimized) setMinimized(false); }}
+          >
             <div className="country-panel__title-row">
               <h2 className="country-panel__name">
                 {country._placeName && country._placeName.toLowerCase() !== country.name.toLowerCase()
                   ? `${country._placeName}, ${country.name}`
                   : country.name}
               </h2>
-              <span className="country-panel__meta">
-                <span className="country-panel__code">{country.code}</span>
-                <span className="country-panel__climate">{country.climate}</span>
-              </span>
+              {!(isMobile && minimized) && (
+                <span className="country-panel__meta">
+                  <span className="country-panel__code">{country.code}</span>
+                  <span className="country-panel__climate">{country.climate}</span>
+                </span>
+              )}
             </div>
             <div className="country-panel__actions">
               {chatFocused && isMobile && (
